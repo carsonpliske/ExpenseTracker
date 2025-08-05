@@ -8,9 +8,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
       },
-      includeAssets: ['favicon.ico'],
       manifest: {
         name: 'Expense Tracker',
         short_name: 'ExpenseTracker',
@@ -23,7 +22,7 @@ export default defineConfig({
         icons: [
           {
             src: '/favicon.ico',
-            sizes: '16x16 32x32',
+            sizes: '48x48',
             type: 'image/x-icon'
           }
         ]
