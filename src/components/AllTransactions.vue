@@ -281,7 +281,8 @@ export default {
 
     const updateTransaction = async (updatedTransaction) => {
       try {
-        await transactionService.update(updatedTransaction.id, updatedTransaction)
+        console.log('Updating transaction:', updatedTransaction)
+        await transactionService.update(updatedTransaction)
         await loadAllTransactions()
         selectedTransaction.value = null
       } catch (error) {
