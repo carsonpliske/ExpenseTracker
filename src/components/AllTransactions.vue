@@ -189,6 +189,7 @@ export default {
     })
 
     const getCategoryById = (categoryId) => {
+      console.log('Looking for category:', categoryId, 'in categories:', props.categories)
       return props.categories.find(cat => cat.id === categoryId)
     }
 

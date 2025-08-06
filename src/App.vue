@@ -61,7 +61,7 @@
 </template>
 
 <script>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import ExpenseTracker from './components/ExpenseTracker.vue'
 import BudgetPlanner from './components/BudgetPlanner.vue'
 import AveragesTracker from './components/AveragesTracker.vue'
@@ -100,8 +100,45 @@ export default {
     }
 
     const handleCategoriesLoaded = (loadedCategories) => {
+      console.log('Categories loaded in App.vue:', loadedCategories)
       categories.value = loadedCategories
     }
+
+    // Load categories immediately if they don't exist
+    const loadCategoriesIfNeeded = () => {
+      if (categories.value.length === 0) {
+        // Default categories from ExpenseTracker
+        categories.value = [
+          { id: 'rent', name: 'Rent', icon: '🏠', color: '#DC2626' },
+          { id: 'groceries', name: 'Groceries', icon: '🛒', color: '#3B82F6' },
+          { id: 'transport', name: 'Transport', icon: '🚗', color: '#F59E0B' },
+          { id: 'leisure', name: 'Leisure', icon: '🎭', color: '#EC4899' },
+          { id: 'restaurant', name: 'Restaurant', icon: '🍽️', color: '#8B5CF6' },
+          { id: 'shopping', name: 'Shopping', icon: '🛍️', color: '#10B981' },
+          { id: 'health', name: 'Health', icon: '🏥', color: '#EF4444' },
+          { id: 'utilities', name: 'Utilities', icon: '💡', color: '#F97316' }
+        ]
+
+        // Load custom colors if they exist
+        try {
+          const customColors = JSON.parse(localStorage.getItem('expense-tracker-custom-colors') || '{}')
+          categories.value.forEach(category => {
+            if (customColors[category.id]) {
+              category.color = customColors[category.id]
+            }
+          })
+        } catch (error) {
+          console.error('Failed to load custom colors:', error)
+        }
+      }
+    }
+
+    // Watch for tab changes to load categories if needed
+    watch(activeTab, (newTab) => {
+      if (newTab === 'all-transactions') {
+        loadCategoriesIfNeeded()
+      }
+    })
 
     return {
       activeTab,
