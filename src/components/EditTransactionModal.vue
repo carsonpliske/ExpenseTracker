@@ -30,6 +30,7 @@
           </select>
           <div style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">
             Debug: Current categoryId = {{ editTransaction.categoryId }}, Categories count = {{ categories?.length || 0 }}
+            <br>Categories: {{ categories?.map(c => c.name).join(', ') }}
           </div>
         </div>
 
@@ -191,6 +192,32 @@ export default {
 .btn-primary:hover {
   background: var(--accent-purple-dark);
   transform: translateY(-1px);
+}
+
+/* Fix dropdown display issues */
+#edit-category {
+  position: relative;
+  z-index: 9999;
+  max-height: none;
+  overflow: visible;
+}
+
+/* Ensure dropdown options are visible */
+#edit-category option {
+  padding: 0.5rem;
+  background: white;
+  color: #333;
+}
+
+/* Increase modal z-index to ensure dropdown appears above everything */
+.modal {
+  z-index: 10000;
+  overflow: visible;
+  max-height: 90vh;
+}
+
+.modal-overlay {
+  overflow: visible;
 }
 
 @media (max-width: 480px) {
