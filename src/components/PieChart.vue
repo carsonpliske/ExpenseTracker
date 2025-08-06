@@ -154,12 +154,11 @@ export default {
         console.log('Elements found:', elements.length)
         
         if (elements.length > 0) {
-          // Only prevent default if we're touching a chart slice
-          event.preventDefault()
           const elementIndex = elements[0].index
           const label = props.data.labels[elementIndex]
           
           console.log('Starting long press timer for:', label)
+          // Don't prevent default on touchstart to allow scrolling
           longPressTimer = setTimeout(() => {
             console.log('Long press triggered for:', label)
             longPressTriggered = true
@@ -168,6 +167,13 @@ export default {
         } else {
           console.log('No elements found, allowing scroll')
         }
+      }
+    }
+
+    const handleTouchMove = (event) => {
+      // If we're in a long press, prevent scrolling
+      if (longPressTimer) {
+        event.preventDefault()
       }
     }
 
@@ -186,6 +192,7 @@ export default {
       // Add selective touch handling for mobile long-press
       const canvas = chartCanvas.value
       canvas.addEventListener('touchstart', handleTouchStart, { passive: false })
+      canvas.addEventListener('touchmove', handleTouchMove, { passive: false })
       canvas.addEventListener('touchend', handleTouchEnd, { passive: true })
       canvas.addEventListener('touchcancel', handleTouchEnd, { passive: true })
     })
