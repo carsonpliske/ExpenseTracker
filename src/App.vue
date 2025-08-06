@@ -19,7 +19,8 @@
         <button 
           class="all-transactions-tab" 
           :class="{ active: activeTab === 'all-transactions' }"
-          @click="activeTab = 'all-transactions'"
+          @click.stop="activeTab = 'all-transactions'"
+          type="button"
         >
           📊 All Transactions
         </button>
@@ -102,14 +103,6 @@ export default {
     const handleCategoriesLoaded = (loadedCategories) => {
       console.log('Categories loaded in App.vue:', loadedCategories)
       categories.value = loadedCategories
-      
-      // If we were loading categories for AllTransactions, switch back
-      if (isLoadingCategories.value) {
-        setTimeout(() => {
-          activeTab.value = 'all-transactions'
-          isLoadingCategories.value = false
-        }, 100)
-      }
     }
 
     // Load categories immediately if they don't exist - get the real current categories
@@ -122,19 +115,7 @@ export default {
       }
     }
 
-    // Track if we're in the middle of loading categories to prevent infinite loops
-    const isLoadingCategories = ref(false)
-
-    // Watch for tab changes to load categories if needed
-    watch(activeTab, (newTab, oldTab) => {
-      if (newTab === 'all-transactions' && categories.value.length === 0 && !isLoadingCategories.value) {
-        console.log('AllTransactions selected but no categories loaded, loading them first')
-        isLoadingCategories.value = true
-        
-        // Temporarily switch to expenses to load categories
-        activeTab.value = 'expenses'
-      }
-    })
+    // Remove complex auto-switching logic - let AllTransactions handle its own categories
 
     return {
       activeTab,
@@ -184,6 +165,9 @@ export default {
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+  pointer-events: auto;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 .all-transactions-tab:hover {
