@@ -97,13 +97,6 @@
       @delete="deleteTransaction"
     />
     
-    <!-- Debug info -->
-    <div v-if="selectedTransaction" style="position: fixed; bottom: 10px; left: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; font-size: 12px; z-index: 20000;">
-      Debug AllTransactions:<br>
-      Selected transaction: {{ selectedTransaction?.id }}<br>
-      Categories prop count: {{ categories?.length || 0 }}<br>
-      Categories: {{ categories?.map(c => c.name).join(', ') }}
-    </div>
   </div>
 </template>
 
@@ -120,14 +113,14 @@ export default {
   props: {
     categories: {
       type: Array,
-      required: true
+      required: false,
+      default: () => []
     }
   },
   setup(props) {
-    console.log('AllTransactions setup - props:', props)
-    console.log('AllTransactions setup - categories prop:', props.categories)
     
     const transactions = ref([])
+    const categories = ref([])
     const selectedFilter = ref('all')
     const specificDate = ref('')
     const startDate = ref('')
@@ -151,8 +144,6 @@ export default {
     }
 
     const filteredTransactions = computed(() => {
-      console.log('All transactions:', transactions.value.length)
-      console.log('Sample transaction dates:', transactions.value.slice(0, 3).map(t => ({ id: t.id, date: t.date, dateObj: new Date(t.date) })))
       let filtered = [...transactions.value]
       const now = new Date()
 
@@ -185,23 +176,52 @@ export default {
         // If no end date, use start date as end date
         const endDateValue = endDate.value || startDate.value
         
-        console.log('Date range filter:', { startValue: startDate.value, endValue: endDateValue })
-        
         filtered = filtered.filter(t => {
           // Convert transaction date to YYYY-MM-DD format for comparison
           const transactionDateStr = new Date(t.date).toISOString().split('T')[0]
-          console.log('Checking transaction date string:', transactionDateStr, 'against range:', startDate.value, 'to', endDateValue)
           return transactionDateStr >= startDate.value && transactionDateStr <= endDateValue
         })
       }
 
-      console.log('Filtered transactions:', filtered.length)
       return filtered.sort((a, b) => new Date(b.date) - new Date(a.date))
     })
 
+    // Load categories directly in AllTransactions (same as ExpenseTracker)
+    const loadCategories = () => {
+      // Use the same categories as ExpenseTracker
+      categories.value = [
+        { id: 'rent', name: 'Rent', icon: '🏠', color: '#DC2626' },
+        { id: 'groceries', name: 'Groceries', icon: '🛒', color: '#3B82F6' },
+        { id: 'transport', name: 'Transport', icon: '🚗', color: '#F59E0B' },
+        { id: 'leisure', name: 'Leisure', icon: '🎭', color: '#EC4899' },
+        { id: 'restaurant', name: 'Restaurant', icon: '🍽️', color: '#8B5CF6' },
+        { id: 'health', name: 'Health', icon: '💚', color: '#10B981' },
+        { id: 'gifts', name: 'Gifts', icon: '🎁', color: '#EF4444' },
+        { id: 'games', name: 'Games', icon: '🎮', color: '#A855F7' },
+        { id: 'shopping', name: 'Shopping', icon: '🛍️', color: '#14B8A6' },
+        { id: 'movies', name: 'Movies', icon: '🎬', color: '#F97316' },
+        { id: 'education', name: 'Education', icon: '📚', color: '#6366F1' },
+        { id: 'traveling', name: 'Traveling', icon: '✈️', color: '#06B6D4' },
+        { id: 'electric', name: 'Electric', icon: '⚡', color: '#FACC15' },
+        { id: 'water', name: 'Water', icon: '💧', color: '#0EA5E9' },
+        { id: 'other', name: 'Other', icon: '📋', color: '#64748B' }
+      ]
+
+      // Load custom colors if they exist
+      try {
+        const customColors = JSON.parse(localStorage.getItem('expense-tracker-custom-colors') || '{}')
+        categories.value.forEach(category => {
+          if (customColors[category.id]) {
+            category.color = customColors[category.id]
+          }
+        })
+      } catch (error) {
+        console.error('Failed to load custom colors:', error)
+      }
+    }
+
     const getCategoryById = (categoryId) => {
-      console.log('Looking for category:', categoryId, 'in categories:', props.categories)
-      return props.categories.find(cat => cat.id === categoryId)
+      return categories.value.find(cat => cat.id === categoryId)
     }
 
     const getTransactionBgColor = (categoryId) => {
@@ -292,7 +312,6 @@ export default {
 
     const updateTransaction = async (updatedTransaction) => {
       try {
-        console.log('Updating transaction:', updatedTransaction)
         await transactionService.update(updatedTransaction)
         await loadAllTransactions()
         selectedTransaction.value = null
@@ -314,7 +333,6 @@ export default {
     const loadAllTransactions = async () => {
       try {
         transactions.value = await transactionService.getAll()
-        console.log('Loaded transactions:', transactions.value)
       } catch (error) {
         console.error('Error loading transactions:', error)
       }
@@ -326,15 +344,17 @@ export default {
 
     onMounted(() => {
       loadAllTransactions()
+      loadCategories()
     })
 
     // Watch for changes in categories prop
     watch(() => props.categories, (newCategories) => {
-      console.log('Categories prop changed in AllTransactions:', newCategories)
+      // Categories prop changes are handled by local loadCategories()
     }, { deep: true })
 
     return {
       transactions,
+      categories,
       selectedFilter,
       specificDate,
       startDate,

@@ -18,7 +18,7 @@
 
         <div class="form-group">
           <label for="edit-category">Category</label>
-          <select id="edit-category" v-model="editTransaction.categoryId" required @change="console.log('Category changed to:', editTransaction.categoryId)">
+          <select id="edit-category" v-model="editTransaction.categoryId" required>
             <option value="">Select a category</option>
             <option 
               v-for="category in categories" 
@@ -28,10 +28,6 @@
               {{ category.icon }} {{ category.name }}
             </option>
           </select>
-          <div style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">
-            Debug: Current categoryId = {{ editTransaction.categoryId }}, Categories count = {{ categories?.length || 0 }}
-            <br>Categories: {{ categories?.map(c => c.name).join(', ') }}
-          </div>
         </div>
 
         <div class="form-group">
@@ -89,9 +85,6 @@ export default {
   },
   emits: ['close', 'save', 'delete'],
   setup(props, { emit }) {
-    console.log('EditTransactionModal props:', props)
-    console.log('Categories received:', props.categories)
-    console.log('Transaction to edit:', props.transaction)
     
     const editTransaction = ref({
       amount: '',
@@ -126,8 +119,6 @@ export default {
         description: props.transaction.description || '',
         date: new Date(props.transaction.date).toISOString().split('T')[0]
       }
-      console.log('Form populated with:', editTransaction.value)
-      console.log('Available categories for dropdown:', props.categories.map(c => ({ id: c.id, name: c.name })))
     })
 
     return {
