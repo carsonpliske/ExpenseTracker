@@ -67,7 +67,7 @@
       </div>
     </div>
 
-    <div class="categories-container">
+    <div class="categories-container" :class="{ 'empty-state-spacing': !hasData }">
       <div class="categories-grid">
         <div 
           v-for="category in categories" 
@@ -307,6 +307,10 @@ export default {
       }))
     })
 
+    const hasData = computed(() => {
+      return getTotalForPeriod() > 0
+    })
+
     const handleSliceClick = (sliceData) => {
       const categoryName = sliceData.label
       const category = categories.value.find(cat => cat.name === categoryName)
@@ -484,6 +488,7 @@ export default {
       getCurrentPeriodLabel,
       chartData,
       legendData,
+      hasData,
       handleSliceClick,
       handleLegendClick,
       addTransaction,
@@ -536,6 +541,11 @@ export default {
 
 .add-transaction-btn:active {
   transform: translateY(0) scale(0.95);
+}
+
+
+.categories-container.empty-state-spacing {
+  margin-top: -8rem;
 }
 
 @media (max-width: 768px) {

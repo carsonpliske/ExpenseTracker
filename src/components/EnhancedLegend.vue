@@ -162,19 +162,25 @@ export default {
 
 .no-spending {
   text-align: center;
-  padding: 2rem;
+  padding: 0.5rem 2rem;
   color: var(--text-secondary);
+  margin: -24rem 0 -20rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .no-spending-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+  font-size: 5rem;
+  margin-bottom: 2rem;
   opacity: 0.6;
 }
 
 .no-spending-text {
-  font-size: 1rem;
+  font-size: 1.25rem;
   font-weight: 500;
+  line-height: 1.6;
 }
 
 /* Mobile optimizations */
