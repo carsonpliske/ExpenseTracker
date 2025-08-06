@@ -544,8 +544,18 @@ export default {
 }
 
 
-.categories-container.empty-state-spacing {
-  margin-top: -8rem;
+/* Only apply aggressive negative margin on mobile devices */
+@media (max-width: 768px) {
+  .categories-container.empty-state-spacing {
+    margin-top: -8rem;
+  }
+}
+
+/* On desktop, use minimal negative margin to avoid overlapping spending insights */
+@media (min-width: 769px) {
+  .categories-container.empty-state-spacing {
+    margin-top: 0;
+  }
 }
 
 @media (max-width: 768px) {

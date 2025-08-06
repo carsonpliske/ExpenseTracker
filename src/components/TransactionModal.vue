@@ -76,11 +76,20 @@ export default {
   },
   emits: ['close', 'save'],
   setup(props, { emit }) {
+    // Helper function to get current date in local timezone
+    const getCurrentLocalDate = () => {
+      const now = new Date()
+      const year = now.getFullYear()
+      const month = String(now.getMonth() + 1).padStart(2, '0')
+      const day = String(now.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+
     const transaction = ref({
       amount: '',
       categoryId: '',
       description: '',
-      date: new Date().toISOString().split('T')[0]
+      date: getCurrentLocalDate()
     })
 
     const saveTransaction = () => {
@@ -90,7 +99,7 @@ export default {
           amount: '',
           categoryId: '',
           description: '',
-          date: new Date().toISOString().split('T')[0]
+          date: getCurrentLocalDate()
         }
       }
     }
