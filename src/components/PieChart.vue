@@ -103,8 +103,6 @@ export default {
           },
           onTouchStart: (event, elements) => {
             if (elements.length > 0) {
-              // Only prevent default when touching a pie slice
-              event.native?.preventDefault()
               const elementIndex = elements[0].index
               const label = props.data.labels[elementIndex]
               
@@ -113,24 +111,59 @@ export default {
                 emit('slice-long-press', { index: elementIndex, label })
               }, 800) // 800ms for long press
             }
-            // Don't prevent default if not touching a slice - allows scrolling
           },
           onTouchEnd: (event, elements) => {
             if (longPressTimer) {
               clearTimeout(longPressTimer)
               longPressTimer = null
             }
-            // Only prevent default if we were handling a slice interaction
-            if (elements.length > 0) {
-              event.native?.preventDefault()
-            }
           }
         }
       })
     }
 
+    const handleTouchStart = (event) => {
+      // Only handle touch if it's on a chart element
+      if (chartInstance) {
+        const rect = chartCanvas.value.getBoundingClientRect()
+        const touch = event.touches[0]
+        const canvasEvent = {
+          x: touch.clientX - rect.left,
+          y: touch.clientY - rect.top
+        }
+        
+        const elements = chartInstance.getElementsAtEventForMode(canvasEvent, 'nearest', { intersect: true }, true)
+        
+        if (elements.length > 0) {
+          // Only prevent default if we're touching a chart slice
+          event.preventDefault()
+          const elementIndex = elements[0].index
+          const label = props.data.labels[elementIndex]
+          
+          longPressTimer = setTimeout(() => {
+            longPressTriggered = true
+            emit('slice-long-press', { index: elementIndex, label })
+          }, 800)
+        }
+        // If not touching a slice, allow normal scrolling
+      }
+    }
+
+    const handleTouchEnd = (event) => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer)
+        longPressTimer = null
+      }
+    }
+
     onMounted(() => {
       createChart()
+      
+      // Add selective touch handling for mobile long-press
+      const canvas = chartCanvas.value
+      canvas.addEventListener('touchstart', handleTouchStart, { passive: false })
+      canvas.addEventListener('touchend', handleTouchEnd, { passive: true })
+      canvas.addEventListener('touchcancel', handleTouchEnd, { passive: true })
     })
 
     watch(() => props.data, () => {
