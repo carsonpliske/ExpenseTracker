@@ -24,6 +24,7 @@
           :data="chartData" 
           size="large"
           @slice-click="handleSliceClick"
+          @slice-long-press="handleSliceLongPress"
         />
       </div>
       
@@ -43,6 +44,7 @@
             :data="chartData" 
             size="large"
             @slice-click="handleSliceClick"
+            @slice-long-press="handleSliceLongPress"
           />
         </div>
         
@@ -115,6 +117,14 @@
       @save="editTransaction"
       @delete="deleteTransaction"
     />
+
+    <ColorPickerModal
+      v-if="showColorPicker && colorPickerCategory"
+      :category-name="colorPickerCategory.name"
+      :current-color="colorPickerCategory.color"
+      @close="closeColorPicker"
+      @save="saveColor"
+    />
   </div>
 </template>
 
@@ -123,6 +133,7 @@ import { ref, computed, onMounted } from 'vue'
 import TransactionModal from './TransactionModal.vue'
 import CategoryDetailModal from './CategoryDetailModal.vue'
 import EditTransactionModal from './EditTransactionModal.vue'
+import ColorPickerModal from './ColorPickerModal.vue'
 import PieChart from './PieChart.vue'
 import EnhancedLegend from './EnhancedLegend.vue'
 import SpendingInsights from './SpendingInsights.vue'
@@ -134,6 +145,7 @@ export default {
     TransactionModal,
     CategoryDetailModal,
     EditTransactionModal,
+    ColorPickerModal,
     PieChart,
     EnhancedLegend,
     SpendingInsights
@@ -147,6 +159,8 @@ export default {
     const transactions = ref([])
     const showTransactionEdit = ref(false)
     const selectedTransaction = ref(null)
+    const showColorPicker = ref(false)
+    const colorPickerCategory = ref(null)
 
     const periods = [
       { value: 'daily', label: 'Daily' },
@@ -305,6 +319,37 @@ export default {
       highlightedCategory.value = highlightedCategory.value === categoryId ? null : categoryId
     }
 
+    const handleSliceLongPress = (sliceData) => {
+      const categoryName = sliceData.label
+      const category = categories.value.find(cat => cat.name === categoryName)
+      if (category) {
+        colorPickerCategory.value = category
+        showColorPicker.value = true
+      }
+    }
+
+    const closeColorPicker = () => {
+      showColorPicker.value = false
+      colorPickerCategory.value = null
+    }
+
+    const saveColor = (newColor) => {
+      if (colorPickerCategory.value) {
+        const categoryIndex = categories.value.findIndex(cat => cat.id === colorPickerCategory.value.id)
+        if (categoryIndex !== -1) {
+          categories.value[categoryIndex].color = newColor
+          // Save to localStorage for persistence
+          localStorage.setItem('expense-tracker-custom-colors', JSON.stringify(
+            categories.value.reduce((acc, cat) => {
+              acc[cat.id] = cat.color
+              return acc
+            }, {})
+          ))
+        }
+      }
+      closeColorPicker()
+    }
+
     const addTransaction = async (transaction) => {
       // Handle date properly to avoid timezone issues
       let dateToStore = new Date().toISOString()
@@ -402,8 +447,25 @@ export default {
       }
     }
 
+    const loadCustomColors = () => {
+      try {
+        const customColors = localStorage.getItem('expense-tracker-custom-colors')
+        if (customColors) {
+          const colorMap = JSON.parse(customColors)
+          categories.value.forEach(category => {
+            if (colorMap[category.id]) {
+              category.color = colorMap[category.id]
+            }
+          })
+        }
+      } catch (error) {
+        console.error('Failed to load custom colors:', error)
+      }
+    }
+
     onMounted(async () => {
       await migrateFromLocalStorage()
+      loadCustomColors()
       await loadTransactions()
     })
 
@@ -434,7 +496,12 @@ export default {
       editTransaction,
       handleTransactionSelect,
       showTransactionEdit,
-      selectedTransaction
+      selectedTransaction,
+      handleSliceLongPress,
+      showColorPicker,
+      colorPickerCategory,
+      closeColorPicker,
+      saveColor
     }
   }
 }

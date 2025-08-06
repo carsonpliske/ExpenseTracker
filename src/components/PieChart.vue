@@ -28,10 +28,12 @@ export default {
       default: 'medium' // small, medium, large
     }
   },
-  emits: ['slice-click'],
+  emits: ['slice-click', 'slice-long-press'],
   setup(props, { emit }) {
     const chartCanvas = ref(null)
     let chartInstance = null
+    let longPressTimer = null
+    let longPressTriggered = false
 
     const createChart = () => {
       if (chartInstance) {
@@ -75,10 +77,45 @@ export default {
             }
           },
           onClick: (event, elements) => {
-            if (elements.length > 0) {
+            if (elements.length > 0 && !longPressTriggered) {
               const elementIndex = elements[0].index
               const label = props.data.labels[elementIndex]
               emit('slice-click', { index: elementIndex, label })
+            }
+            longPressTriggered = false
+          },
+          onMouseDown: (event, elements) => {
+            if (elements.length > 0) {
+              const elementIndex = elements[0].index
+              const label = props.data.labels[elementIndex]
+              
+              longPressTimer = setTimeout(() => {
+                longPressTriggered = true
+                emit('slice-long-press', { index: elementIndex, label })
+              }, 800) // 800ms for long press
+            }
+          },
+          onMouseUp: () => {
+            if (longPressTimer) {
+              clearTimeout(longPressTimer)
+              longPressTimer = null
+            }
+          },
+          onTouchStart: (event, elements) => {
+            if (elements.length > 0) {
+              const elementIndex = elements[0].index
+              const label = props.data.labels[elementIndex]
+              
+              longPressTimer = setTimeout(() => {
+                longPressTriggered = true
+                emit('slice-long-press', { index: elementIndex, label })
+              }, 800) // 800ms for long press
+            }
+          },
+          onTouchEnd: () => {
+            if (longPressTimer) {
+              clearTimeout(longPressTimer)
+              longPressTimer = null
             }
           }
         }

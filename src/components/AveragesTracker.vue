@@ -185,31 +185,34 @@ export default {
 
 .period-selector {
   display: flex;
+  justify-content: center;
   gap: 0.5rem;
   margin-bottom: 2rem;
-  flex-wrap: wrap;
+  background: var(--surface-light);
+  padding: 0.5rem;
+  border-radius: 1rem;
 }
 
 .period-btn {
-  padding: 0.75rem 1.5rem;
-  background: var(--surface-dark);
-  border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
+  flex: 1;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: none;
   color: var(--text-secondary);
+  border-radius: 0.5rem;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-weight: 500;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
 }
 
-.period-btn:hover {
-  background: var(--accent-purple-dark);
-  color: var(--text-primary);
+.period-btn:hover:not(.active) {
+  background: rgba(139, 92, 246, 0.1);
 }
 
 .period-btn.active {
-  background: var(--accent-purple);
-  color: white;
-  border-color: var(--accent-purple);
+  background: var(--primary-gradient);
+  color: var(--text-primary);
+  box-shadow: var(--shadow);
 }
 
 .expense-overview {
@@ -223,8 +226,13 @@ export default {
 
 .total-amount {
   font-size: 3rem;
-  font-weight: bold;
+  font-weight: 700;
   margin-bottom: 0.5rem;
+  color: white !important;
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: white !important;
+  background-clip: unset !important;
 }
 
 .period-label {
