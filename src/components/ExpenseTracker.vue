@@ -475,9 +475,9 @@ export default {
   .add-transaction-btn {
     bottom: 1rem;
     right: 1rem;
-    width: 3rem;
-    height: 3rem;
-    font-size: 1.25rem;
+    width: 4rem;
+    height: 4rem;
+    font-size: 1.5rem;
   }
 }
 </style>
