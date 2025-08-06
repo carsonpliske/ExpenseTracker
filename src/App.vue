@@ -61,7 +61,7 @@
 </template>
 
 <script>
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import ExpenseTracker from './components/ExpenseTracker.vue'
 import BudgetPlanner from './components/BudgetPlanner.vue'
 import AveragesTracker from './components/AveragesTracker.vue'
@@ -104,39 +104,30 @@ export default {
       categories.value = loadedCategories
     }
 
-    // Load categories immediately if they don't exist
+    // Load categories immediately if they don't exist - get the real current categories
     const loadCategoriesIfNeeded = () => {
       if (categories.value.length === 0) {
-        // Default categories from ExpenseTracker
-        categories.value = [
-          { id: 'rent', name: 'Rent', icon: '🏠', color: '#DC2626' },
-          { id: 'groceries', name: 'Groceries', icon: '🛒', color: '#3B82F6' },
-          { id: 'transport', name: 'Transport', icon: '🚗', color: '#F59E0B' },
-          { id: 'leisure', name: 'Leisure', icon: '🎭', color: '#EC4899' },
-          { id: 'restaurant', name: 'Restaurant', icon: '🍽️', color: '#8B5CF6' },
-          { id: 'shopping', name: 'Shopping', icon: '🛍️', color: '#10B981' },
-          { id: 'health', name: 'Health', icon: '🏥', color: '#EF4444' },
-          { id: 'utilities', name: 'Utilities', icon: '💡', color: '#F97316' }
-        ]
-
-        // Load custom colors if they exist
-        try {
-          const customColors = JSON.parse(localStorage.getItem('expense-tracker-custom-colors') || '{}')
-          categories.value.forEach(category => {
-            if (customColors[category.id]) {
-              category.color = customColors[category.id]
-            }
-          })
-        } catch (error) {
-          console.error('Failed to load custom colors:', error)
-        }
+        // Force load the ExpenseTracker component to get real categories
+        // This is a workaround - we should get categories from ExpenseTracker
+        console.log('Categories not loaded yet, will load from ExpenseTracker')
+        // Don't set default categories here, let ExpenseTracker provide them
       }
     }
 
     // Watch for tab changes to load categories if needed
     watch(activeTab, (newTab) => {
-      if (newTab === 'all-transactions') {
-        loadCategoriesIfNeeded()
+      if (newTab === 'all-transactions' && categories.value.length === 0) {
+        console.log('AllTransactions selected but no categories loaded, temporarily switching to expenses')
+        // Temporarily switch to expenses to load categories, then back to all-transactions
+        activeTab.value = 'expenses'
+        // Use nextTick to wait for ExpenseTracker to mount and load categories
+        nextTick(() => {
+          setTimeout(() => {
+            if (categories.value.length > 0) {
+              activeTab.value = 'all-transactions'
+            }
+          }, 200) // Give ExpenseTracker time to load categories
+        })
       }
     })
 
