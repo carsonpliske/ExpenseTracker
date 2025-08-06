@@ -102,6 +102,14 @@ export default {
     const handleCategoriesLoaded = (loadedCategories) => {
       console.log('Categories loaded in App.vue:', loadedCategories)
       categories.value = loadedCategories
+      
+      // If we were loading categories for AllTransactions, switch back
+      if (isLoadingCategories.value) {
+        setTimeout(() => {
+          activeTab.value = 'all-transactions'
+          isLoadingCategories.value = false
+        }, 100)
+      }
     }
 
     // Load categories immediately if they don't exist - get the real current categories
@@ -114,20 +122,17 @@ export default {
       }
     }
 
+    // Track if we're in the middle of loading categories to prevent infinite loops
+    const isLoadingCategories = ref(false)
+
     // Watch for tab changes to load categories if needed
-    watch(activeTab, (newTab) => {
-      if (newTab === 'all-transactions' && categories.value.length === 0) {
-        console.log('AllTransactions selected but no categories loaded, temporarily switching to expenses')
-        // Temporarily switch to expenses to load categories, then back to all-transactions
+    watch(activeTab, (newTab, oldTab) => {
+      if (newTab === 'all-transactions' && categories.value.length === 0 && !isLoadingCategories.value) {
+        console.log('AllTransactions selected but no categories loaded, loading them first')
+        isLoadingCategories.value = true
+        
+        // Temporarily switch to expenses to load categories
         activeTab.value = 'expenses'
-        // Use nextTick to wait for ExpenseTracker to mount and load categories
-        nextTick(() => {
-          setTimeout(() => {
-            if (categories.value.length > 0) {
-              activeTab.value = 'all-transactions'
-            }
-          }, 200) // Give ExpenseTracker time to load categories
-        })
       }
     })
 
