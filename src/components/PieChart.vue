@@ -34,6 +34,8 @@ export default {
     let chartInstance = null
     let longPressTimer = null
     let longPressTriggered = false
+    let lastClickTime = 0
+    let lastClickElement = null
 
     const createChart = () => {
       if (chartInstance) {
@@ -77,124 +79,34 @@ export default {
             }
           },
           onClick: (event, elements) => {
-            if (elements.length > 0 && !longPressTriggered) {
+            if (elements.length > 0) {
               const elementIndex = elements[0].index
               const label = props.data.labels[elementIndex]
-              emit('slice-click', { index: elementIndex, label })
+              const currentTime = Date.now()
+              
+              // Check for double-tap (within 500ms)
+              if (lastClickElement === elementIndex && (currentTime - lastClickTime) < 500) {
+                console.log('Double tap detected - opening color picker')
+                emit('slice-long-press', { index: elementIndex, label })
+                lastClickTime = 0 // Reset to prevent triple-tap
+                lastClickElement = null
+              } else {
+                // Single tap - normal behavior
+                if (!longPressTriggered) {
+                  emit('slice-click', { index: elementIndex, label })
+                }
+                lastClickTime = currentTime
+                lastClickElement = elementIndex
+              }
             }
             longPressTriggered = false
           },
-          onMouseDown: (event, elements) => {
-            if (elements.length > 0) {
-              const elementIndex = elements[0].index
-              const label = props.data.labels[elementIndex]
-              
-              longPressTimer = setTimeout(() => {
-                longPressTriggered = true
-                emit('slice-long-press', { index: elementIndex, label })
-              }, 800) // 800ms for long press
-            }
-          },
-          onMouseUp: () => {
-            if (longPressTimer) {
-              clearTimeout(longPressTimer)
-              longPressTimer = null
-            }
-          },
-          onTouchStart: (event, elements) => {
-            if (elements.length > 0) {
-              const elementIndex = elements[0].index
-              const label = props.data.labels[elementIndex]
-              
-              longPressTimer = setTimeout(() => {
-                longPressTriggered = true
-                emit('slice-long-press', { index: elementIndex, label })
-              }, 800) // 800ms for long press
-            }
-          },
-          onTouchEnd: (event, elements) => {
-            if (longPressTimer) {
-              clearTimeout(longPressTimer)
-              longPressTimer = null
-            }
-          }
         }
       })
     }
 
-    const handleTouchStart = (event) => {
-      console.log('Touch start detected')
-      // Only handle touch if it's on a chart element
-      if (chartInstance) {
-        const rect = chartCanvas.value.getBoundingClientRect()
-        const touch = event.touches[0]
-        
-        // Create a proper event-like object for Chart.js
-        const syntheticEvent = {
-          type: 'touchstart',
-          x: touch.clientX - rect.left,
-          y: touch.clientY - rect.top,
-          clientX: touch.clientX,
-          clientY: touch.clientY,
-          native: event
-        }
-        
-        console.log('Touch position:', { x: syntheticEvent.x, y: syntheticEvent.y })
-        
-        // Try multiple detection methods
-        let elements = chartInstance.getElementsAtEventForMode(syntheticEvent, 'nearest', { intersect: true }, false)
-        if (elements.length === 0) {
-          elements = chartInstance.getElementsAtEventForMode(syntheticEvent, 'point', { intersect: false }, false)
-        }
-        if (elements.length === 0) {
-          // Try with less strict settings
-          elements = chartInstance.getElementsAtEventForMode(syntheticEvent, 'nearest', { intersect: false }, false)
-        }
-        
-        console.log('Elements found:', elements.length)
-        
-        if (elements.length > 0) {
-          const elementIndex = elements[0].index
-          const label = props.data.labels[elementIndex]
-          
-          console.log('Starting long press timer for:', label)
-          // Don't prevent default on touchstart to allow scrolling
-          longPressTimer = setTimeout(() => {
-            console.log('Long press triggered for:', label)
-            longPressTriggered = true
-            emit('slice-long-press', { index: elementIndex, label })
-          }, 600)
-        } else {
-          console.log('No elements found, allowing scroll')
-        }
-      }
-    }
-
-    const handleTouchMove = (event) => {
-      // If we're in a long press, prevent scrolling
-      if (longPressTimer) {
-        event.preventDefault()
-      }
-    }
-
-    const handleTouchEnd = (event) => {
-      console.log('Touch end detected')
-      if (longPressTimer) {
-        console.log('Clearing long press timer')
-        clearTimeout(longPressTimer)
-        longPressTimer = null
-      }
-    }
-
     onMounted(() => {
       createChart()
-      
-      // Add selective touch handling for mobile long-press
-      const canvas = chartCanvas.value
-      canvas.addEventListener('touchstart', handleTouchStart, { passive: false })
-      canvas.addEventListener('touchmove', handleTouchMove, { passive: false })
-      canvas.addEventListener('touchend', handleTouchEnd, { passive: true })
-      canvas.addEventListener('touchcancel', handleTouchEnd, { passive: true })
     })
 
     watch(() => props.data, () => {
