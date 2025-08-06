@@ -103,6 +103,8 @@ export default {
           },
           onTouchStart: (event, elements) => {
             if (elements.length > 0) {
+              // Only prevent default when touching a pie slice
+              event.native?.preventDefault()
               const elementIndex = elements[0].index
               const label = props.data.labels[elementIndex]
               
@@ -111,49 +113,24 @@ export default {
                 emit('slice-long-press', { index: elementIndex, label })
               }, 800) // 800ms for long press
             }
+            // Don't prevent default if not touching a slice - allows scrolling
           },
-          onTouchEnd: () => {
+          onTouchEnd: (event, elements) => {
             if (longPressTimer) {
               clearTimeout(longPressTimer)
               longPressTimer = null
+            }
+            // Only prevent default if we were handling a slice interaction
+            if (elements.length > 0) {
+              event.native?.preventDefault()
             }
           }
         }
       })
     }
 
-    const handleCanvasTouchStart = (event) => {
-      event.preventDefault()
-      if (chartInstance) {
-        const elements = chartInstance.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true)
-        if (elements.length > 0) {
-          const elementIndex = elements[0].index
-          const label = props.data.labels[elementIndex]
-          
-          longPressTimer = setTimeout(() => {
-            longPressTriggered = true
-            emit('slice-long-press', { index: elementIndex, label })
-          }, 800)
-        }
-      }
-    }
-
-    const handleCanvasTouchEnd = (event) => {
-      event.preventDefault()
-      if (longPressTimer) {
-        clearTimeout(longPressTimer)
-        longPressTimer = null
-      }
-    }
-
     onMounted(() => {
       createChart()
-      
-      // Add manual touch event listeners for better mobile support
-      const canvas = chartCanvas.value
-      canvas.addEventListener('touchstart', handleCanvasTouchStart, { passive: false })
-      canvas.addEventListener('touchend', handleCanvasTouchEnd, { passive: false })
-      canvas.addEventListener('touchcancel', handleCanvasTouchEnd, { passive: false })
     })
 
     watch(() => props.data, () => {
@@ -177,6 +154,7 @@ export default {
   -ms-user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 /* Size variants */
