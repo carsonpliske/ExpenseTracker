@@ -96,11 +96,19 @@
       @save="updateTransaction"
       @delete="deleteTransaction"
     />
+    
+    <!-- Debug info -->
+    <div v-if="selectedTransaction" style="position: fixed; bottom: 10px; left: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; font-size: 12px; z-index: 20000;">
+      Debug AllTransactions:<br>
+      Selected transaction: {{ selectedTransaction?.id }}<br>
+      Categories prop count: {{ categories?.length || 0 }}<br>
+      Categories: {{ categories?.map(c => c.name).join(', ') }}
+    </div>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { transactionService } from '../services/database.js'
 import EditTransactionModal from './EditTransactionModal.vue'
 
@@ -116,6 +124,9 @@ export default {
     }
   },
   setup(props) {
+    console.log('AllTransactions setup - props:', props)
+    console.log('AllTransactions setup - categories prop:', props.categories)
+    
     const transactions = ref([])
     const selectedFilter = ref('all')
     const specificDate = ref('')
@@ -316,6 +327,11 @@ export default {
     onMounted(() => {
       loadAllTransactions()
     })
+
+    // Watch for changes in categories prop
+    watch(() => props.categories, (newCategories) => {
+      console.log('Categories prop changed in AllTransactions:', newCategories)
+    }, { deep: true })
 
     return {
       transactions,
