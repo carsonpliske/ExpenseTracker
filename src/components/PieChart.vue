@@ -123,6 +123,7 @@ export default {
     }
 
     const handleTouchStart = (event) => {
+      console.log('Touch start detected')
       // Only handle touch if it's on a chart element
       if (chartInstance) {
         const rect = chartCanvas.value.getBoundingClientRect()
@@ -132,7 +133,9 @@ export default {
           y: touch.clientY - rect.top
         }
         
-        const elements = chartInstance.getElementsAtEventForMode(canvasEvent, 'nearest', { intersect: true }, true)
+        console.log('Touch position:', canvasEvent)
+        const elements = chartInstance.getElementsAtEventForMode(canvasEvent, 'point', { intersect: true }, false)
+        console.log('Elements found:', elements.length)
         
         if (elements.length > 0) {
           // Only prevent default if we're touching a chart slice
@@ -140,17 +143,23 @@ export default {
           const elementIndex = elements[0].index
           const label = props.data.labels[elementIndex]
           
+          console.log('Starting long press timer for:', label)
           longPressTimer = setTimeout(() => {
+            console.log('Long press triggered for:', label)
             longPressTriggered = true
             emit('slice-long-press', { index: elementIndex, label })
-          }, 800)
+          }, 600) // Reduced from 800ms to 600ms for better mobile responsiveness
+        } else {
+          console.log('No elements found, allowing scroll')
         }
         // If not touching a slice, allow normal scrolling
       }
     }
 
     const handleTouchEnd = (event) => {
+      console.log('Touch end detected')
       if (longPressTimer) {
+        console.log('Clearing long press timer')
         clearTimeout(longPressTimer)
         longPressTimer = null
       }
