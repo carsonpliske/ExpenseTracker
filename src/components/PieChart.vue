@@ -128,13 +128,29 @@ export default {
       if (chartInstance) {
         const rect = chartCanvas.value.getBoundingClientRect()
         const touch = event.touches[0]
-        const canvasEvent = {
+        
+        // Create a proper event-like object for Chart.js
+        const syntheticEvent = {
+          type: 'touchstart',
           x: touch.clientX - rect.left,
-          y: touch.clientY - rect.top
+          y: touch.clientY - rect.top,
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+          native: event
         }
         
-        console.log('Touch position:', canvasEvent)
-        const elements = chartInstance.getElementsAtEventForMode(canvasEvent, 'point', { intersect: true }, false)
+        console.log('Touch position:', { x: syntheticEvent.x, y: syntheticEvent.y })
+        
+        // Try multiple detection methods
+        let elements = chartInstance.getElementsAtEventForMode(syntheticEvent, 'nearest', { intersect: true }, false)
+        if (elements.length === 0) {
+          elements = chartInstance.getElementsAtEventForMode(syntheticEvent, 'point', { intersect: false }, false)
+        }
+        if (elements.length === 0) {
+          // Try with less strict settings
+          elements = chartInstance.getElementsAtEventForMode(syntheticEvent, 'nearest', { intersect: false }, false)
+        }
+        
         console.log('Elements found:', elements.length)
         
         if (elements.length > 0) {
@@ -148,11 +164,10 @@ export default {
             console.log('Long press triggered for:', label)
             longPressTriggered = true
             emit('slice-long-press', { index: elementIndex, label })
-          }, 600) // Reduced from 800ms to 600ms for better mobile responsiveness
+          }, 600)
         } else {
           console.log('No elements found, allowing scroll')
         }
-        // If not touching a slice, allow normal scrolling
       }
     }
 
