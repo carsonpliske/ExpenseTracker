@@ -32,6 +32,21 @@ export default defineConfig({
             type: 'image/png',
             purpose: 'maskable any'
           }
+        ],
+        shortcuts: [
+          {
+            name: 'Quick Add',
+            short_name: 'Quick Add',
+            description: 'Quickly add a new transaction',
+            url: '/quick-add',
+            icons: [
+              {
+                src: '/favicon.png',
+                sizes: '192x192',
+                type: 'image/png'
+              }
+            ]
+          }
         ]
       }
     })

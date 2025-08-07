@@ -160,7 +160,6 @@ export default {
     const variableCategories = [
       { id: 'groceries', name: 'Groceries', icon: '🛒', color: '#3B82F6' },
       { id: 'transport', name: 'Transport', icon: '🚗', color: '#F59E0B' },
-      { id: 'leisure', name: 'Leisure', icon: '🎭', color: '#EC4899' },
       { id: 'restaurant', name: 'Restaurant', icon: '🍽️', color: '#8B5CF6' },
       { id: 'health', name: 'Health', icon: '💚', color: '#10B981' },
       { id: 'gifts', name: 'Gifts', icon: '🎁', color: '#EF4444' },
