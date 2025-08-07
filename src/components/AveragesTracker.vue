@@ -71,22 +71,35 @@ export default {
       { value: 'yearly', label: 'Yearly' }
     ]
 
-    const categories = ref([
-      { id: 'rent', name: 'Rent', icon: '🏠', color: '#DC2626' },
-      { id: 'groceries', name: 'Groceries', icon: '🛒', color: '#3B82F6' },
-      { id: 'transport', name: 'Transport', icon: '🚗', color: '#F59E0B' },
-      { id: 'restaurant', name: 'Restaurant', icon: '🍽️', color: '#8B5CF6' },
-      { id: 'health', name: 'Health', icon: '💚', color: '#10B981' },
-      { id: 'gifts', name: 'Gifts', icon: '🎁', color: '#EF4444' },
-      { id: 'games', name: 'Games', icon: '🎮', color: '#A855F7' },
-      { id: 'shopping', name: 'Shopping', icon: '🛍️', color: '#14B8A6' },
-      { id: 'movies', name: 'Movies', icon: '🎬', color: '#F97316' },
-      { id: 'education', name: 'Education', icon: '📚', color: '#6366F1' },
-      { id: 'traveling', name: 'Traveling', icon: '✈️', color: '#06B6D4' },
-      { id: 'electric', name: 'Electric', icon: '⚡', color: '#FACC15' },
-      { id: 'water', name: 'Water', icon: '💧', color: '#0EA5E9' },
-      { id: 'other', name: 'Other', icon: '📋', color: '#64748B' }
-    ])
+    const baseCategoriesData = [
+      { id: 'rent', name: 'Rent', icon: '🏠', darkColor: '#DC2626', lightColor: '#991B1B' },
+      { id: 'groceries', name: 'Groceries', icon: '🛒', darkColor: '#3B82F6', lightColor: '#1D4ED8' },
+      { id: 'transport', name: 'Transport', icon: '🚗', darkColor: '#F59E0B', lightColor: '#D97706' },
+      { id: 'restaurant', name: 'Restaurant', icon: '🍽️', darkColor: '#8B5CF6', lightColor: '#7C3AED' },
+      { id: 'health', name: 'Health', icon: '💚', darkColor: '#10B981', lightColor: '#059669' },
+      { id: 'gifts', name: 'Gifts', icon: '🎁', darkColor: '#EF4444', lightColor: '#DC2626' },
+      { id: 'games', name: 'Games', icon: '🎮', darkColor: '#A855F7', lightColor: '#9333EA' },
+      { id: 'shopping', name: 'Shopping', icon: '🛍️', darkColor: '#14B8A6', lightColor: '#0F766E' },
+      { id: 'movies', name: 'Movies', icon: '🎬', darkColor: '#F97316', lightColor: '#EA580C' },
+      { id: 'education', name: 'Education', icon: '📚', darkColor: '#6366F1', lightColor: '#4F46E5' },
+      { id: 'traveling', name: 'Traveling', icon: '✈️', darkColor: '#06B6D4', lightColor: '#0284C7' },
+      { id: 'electric', name: 'Electric', icon: '⚡', darkColor: '#FACC15', lightColor: '#CA8A04' },
+      { id: 'water', name: 'Water', icon: '💧', darkColor: '#0EA5E9', lightColor: '#0369A1' },
+      { id: 'other', name: 'Other', icon: '📋', darkColor: '#64748B', lightColor: '#475569' }
+    ]
+
+    // Get current theme
+    const getCurrentTheme = () => {
+      return document.documentElement.getAttribute('data-theme') || 'dark'
+    }
+
+    const categories = computed(() => {
+      const currentTheme = getCurrentTheme()
+      return baseCategoriesData.map(cat => ({
+        ...cat,
+        color: currentTheme === 'light' ? cat.lightColor : cat.darkColor
+      }))
+    })
 
     const getDateRange = () => {
       if (transactions.value.length === 0) return { start: new Date(), end: new Date() }
@@ -268,8 +281,14 @@ export default {
   text-align: center;
   margin-bottom: 2rem;
   padding: 2rem;
-  background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+  background: var(--primary-gradient);
   border-radius: 1rem;
+  color: white;
+}
+
+/* Light mode specific styling for expense overview */
+[data-theme="light"] .expense-overview {
+  background: linear-gradient(135deg, #7C3AED, #5B21B6);
   color: white;
 }
 
@@ -287,6 +306,7 @@ export default {
 .period-label {
   font-size: 1.1rem;
   opacity: 0.9;
+  color: white;
 }
 
 .categories-container {

@@ -6,9 +6,8 @@
     />
     <div class="container">
       <header class="header">
-        <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">💰</div>
-        <h1 style="font-size: 1.75rem;">Tracks</h1>
-        <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">Expenses & Income</p>
+        <div style="font-size: 1.1rem; margin-bottom: 0.1rem;">💰</div>
+        <h1 style="font-size: 1.3rem;">Expense Tracker</h1>
         <button 
           v-if="showInstallPrompt" 
           @click="installPWA" 

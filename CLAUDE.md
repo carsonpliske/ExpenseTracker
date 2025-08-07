@@ -8,3 +8,4 @@
 7. Keep in mind that this site might be live, with users and data. So ask. If so, think through any changes which might affect the API and existing data.
 8. Create a todo.md file with the summary of changes I've made per session, that way we can remember where we last left off.
 9. Keep document of all the steps you are doing them as you work on them and finish them, that way if we run out of tokens you know where you last left of.
+10. Before Pushing to Git, always double check with me beforehand.
