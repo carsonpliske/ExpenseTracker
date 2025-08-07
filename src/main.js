@@ -1,7 +1,6 @@
 import { createApp } from 'vue'
 import './style.css'
 import App from './App.vue'
-import router from './router'
 
 // Register PWA Service Worker
 if ('serviceWorker' in navigator) {
@@ -16,4 +15,4 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-createApp(App).use(router).mount('#app')
+createApp(App).mount('#app')
