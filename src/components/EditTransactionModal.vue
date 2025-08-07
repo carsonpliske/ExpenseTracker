@@ -155,7 +155,7 @@ export default {
 }
 
 .btn-danger {
-  background: #DC2626;
+  background: var(--accent-red);
   color: white;
 }
 
@@ -196,8 +196,8 @@ export default {
 /* Ensure dropdown options are visible */
 #edit-category option {
   padding: 0.5rem;
-  background: white;
-  color: #333;
+  background: var(--surface-dark);
+  color: var(--text-primary);
 }
 
 /* Increase modal z-index to ensure dropdown appears above everything */

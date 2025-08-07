@@ -1,5 +1,9 @@
 <template>
-  <div id="app">
+  <div id="app" :data-theme="currentTheme">
+    <ThemeToggle 
+      :is-dark="currentTheme === 'dark'" 
+      @toggle-theme="toggleTheme" 
+    />
     <div class="container">
       <header class="header">
         <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">💰</div>
@@ -62,11 +66,12 @@
 </template>
 
 <script>
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onMounted } from 'vue'
 import ExpenseTracker from './components/ExpenseTracker.vue'
 import BudgetPlanner from './components/BudgetPlanner.vue'
 import AveragesTracker from './components/AveragesTracker.vue'
 import AllTransactions from './components/AllTransactions.vue'
+import ThemeToggle from './components/ThemeToggle.vue'
 
 export default {
   name: 'App',
@@ -74,13 +79,36 @@ export default {
     ExpenseTracker,
     BudgetPlanner,
     AveragesTracker,
-    AllTransactions
+    AllTransactions,
+    ThemeToggle
   },
   setup() {
     const activeTab = ref('expenses')
     const showInstallPrompt = ref(false)
     const categories = ref([])
     let deferredPrompt = null
+
+    // Theme management
+    const currentTheme = ref('dark') // Default to dark theme
+
+    // Load theme from localStorage
+    const loadTheme = () => {
+      const savedTheme = localStorage.getItem('expense-tracker-theme')
+      if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
+        currentTheme.value = savedTheme
+      }
+    }
+
+    // Save theme to localStorage
+    const saveTheme = () => {
+      localStorage.setItem('expense-tracker-theme', currentTheme.value)
+    }
+
+    // Toggle theme
+    const toggleTheme = () => {
+      currentTheme.value = currentTheme.value === 'dark' ? 'light' : 'dark'
+      saveTheme()
+    }
 
     // Handle PWA install prompt
     window.addEventListener('beforeinstallprompt', (e) => {
@@ -117,12 +145,19 @@ export default {
 
     // Remove complex auto-switching logic - let AllTransactions handle its own categories
 
+    // Initialize theme on mount
+    onMounted(() => {
+      loadTheme()
+    })
+
     return {
       activeTab,
       showInstallPrompt,
       categories,
+      currentTheme,
       installPWA,
-      handleCategoriesLoaded
+      handleCategoriesLoaded,
+      toggleTheme
     }
   }
 }

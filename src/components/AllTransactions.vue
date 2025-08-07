@@ -44,6 +44,26 @@
           </div>
         </div>
       </div>
+      
+      <!-- Search Section -->
+      <div class="search-section">
+        <div class="search-input-container">
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Search transactions (e.g., 'rent', 'taco bell', 'groceries')..."
+            class="search-input"
+            @input="applyFilters"
+          >
+          <div class="search-icon">🔍</div>
+        </div>
+        <div v-if="searchQuery && filteredTransactions.length === 0" class="search-no-results">
+          No transactions found for "{{ searchQuery }}"
+        </div>
+        <div v-if="searchQuery && filteredTransactions.length > 0" class="search-results-count">
+          Found {{ filteredTransactions.length }} transaction{{ filteredTransactions.length === 1 ? '' : 's' }} for "{{ searchQuery }}"
+        </div>
+      </div>
     </div>
 
     <!-- Period Header -->
@@ -140,6 +160,7 @@ export default {
     const endDate = ref('')
     const selectedTransaction = ref(null)
     const showAddModal = ref(false)
+    const searchQuery = ref('')
 
     const filters = [
       { value: 'all', label: 'All' },
@@ -194,6 +215,22 @@ export default {
           // Convert transaction date to YYYY-MM-DD format for comparison
           const transactionDateStr = new Date(t.date).toISOString().split('T')[0]
           return transactionDateStr >= startDate.value && transactionDateStr <= endDateValue
+        })
+      }
+
+      // Apply search filter if there's a search query
+      if (searchQuery.value.trim()) {
+        const query = searchQuery.value.toLowerCase().trim()
+        filtered = filtered.filter(transaction => {
+          // Get category name
+          const category = getCategoryById(transaction.categoryId)
+          const categoryName = category ? category.name.toLowerCase() : ''
+          
+          // Get description (if exists)
+          const description = transaction.description ? transaction.description.toLowerCase() : ''
+          
+          // Search in both category name and description
+          return categoryName.includes(query) || description.includes(query)
         })
       }
 
@@ -406,6 +443,7 @@ export default {
       endDate,
       selectedTransaction,
       showAddModal,
+      searchQuery,
       filters,
       filteredTransactions,
       getCategoryById,
@@ -743,6 +781,76 @@ export default {
   transform: translateY(0) scale(0.95);
 }
 
+/* Search Section Styles */
+.search-section {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(59, 130, 246, 0.05));
+  border-radius: 12px;
+  border: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+.search-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  padding-right: 3rem;
+  border: 2px solid rgba(139, 92, 246, 0.2);
+  border-radius: 12px;
+  background: var(--surface-light);
+  color: var(--text-primary);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(139, 92, 246, 0.1);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent-purple);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+  background: var(--surface-dark);
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+.search-icon {
+  position: absolute;
+  right: 1rem;
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.search-no-results {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  color: var(--accent-red);
+  font-weight: 500;
+  text-align: center;
+}
+
+.search-results-count {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 8px;
+  color: var(--accent-green);
+  font-weight: 500;
+  text-align: center;
+}
+
 @media (max-width: 768px) {
   .add-transaction-btn {
     bottom: 1rem;
@@ -750,6 +858,21 @@ export default {
     width: 4rem;
     height: 4rem;
     font-size: 1.5rem;
+  }
+  
+  .search-input {
+    font-size: 0.9rem;
+    padding: 0.65rem 0.85rem;
+    padding-right: 2.5rem;
+  }
+  
+  .search-icon {
+    right: 0.85rem;
+    font-size: 1rem;
+  }
+  
+  .search-input::placeholder {
+    font-size: 0.85rem;
   }
 }
 </style>
