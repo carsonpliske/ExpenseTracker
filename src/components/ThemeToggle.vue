@@ -25,7 +25,7 @@ export default {
 
 <style scoped>
 .theme-toggle {
-  position: fixed;
+  position: absolute;
   top: 1rem;
   right: 1rem;
   width: 3rem;
@@ -38,8 +38,10 @@ export default {
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
-  z-index: 1000;
+  z-index: 9999;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  /* Ensure it stays above everything */
+  pointer-events: auto;
 }
 
 .theme-toggle:hover {
