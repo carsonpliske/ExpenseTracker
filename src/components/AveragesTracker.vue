@@ -179,7 +179,17 @@ export default {
       if (transaction.date) {
         if (typeof transaction.date === 'string' && transaction.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
           const [year, month, day] = transaction.date.split('-')
-          dateToStore = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0).toISOString()
+          const now = new Date()
+          // Use the selected date but keep the current time (hours, minutes, seconds, ms)
+          dateToStore = new Date(
+            parseInt(year), 
+            parseInt(month) - 1, 
+            parseInt(day), 
+            now.getHours(),
+            now.getMinutes(),
+            now.getSeconds(),
+            now.getMilliseconds()
+          ).toISOString()
         } else {
           dateToStore = new Date(transaction.date).toISOString()
         }

@@ -150,7 +150,8 @@ export default {
     EnhancedLegend,
     SpendingInsights
   },
-  setup() {
+  emits: ['categories-loaded'],
+  setup(props, { emit }) {
     const selectedPeriod = ref('monthly')
     const showAddModal = ref(false)
     const showCategoryDetail = ref(false)
@@ -355,13 +356,23 @@ export default {
     }
 
     const addTransaction = async (transaction) => {
-      // Handle date properly to avoid timezone issues
+      // Handle date properly to preserve creation time for sorting
       let dateToStore = new Date().toISOString()
       if (transaction.date) {
-        // If it's already in YYYY-MM-DD format from date input, create date at local noon
+        // If user selected a specific date, use that date but preserve the current time
         if (typeof transaction.date === 'string' && transaction.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
           const [year, month, day] = transaction.date.split('-')
-          dateToStore = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0).toISOString()
+          const now = new Date()
+          // Use the selected date but keep the current time (hours, minutes, seconds, ms)
+          dateToStore = new Date(
+            parseInt(year), 
+            parseInt(month) - 1, 
+            parseInt(day), 
+            now.getHours(),
+            now.getMinutes(),
+            now.getSeconds(),
+            now.getMilliseconds()
+          ).toISOString()
         } else {
           dateToStore = new Date(transaction.date).toISOString()
         }
@@ -414,13 +425,25 @@ export default {
     const editTransaction = async (editedTransaction) => {
       const index = transactions.value.findIndex(t => t.id === editedTransaction.id)
       if (index !== -1) {
-        // Handle date properly to avoid timezone issues
+        const originalTransaction = transactions.value[index]
         let dateToStore = editedTransaction.date
+        
         if (editedTransaction.date) {
-          // If it's in YYYY-MM-DD format from date input, create date at local noon
+          // If it's in YYYY-MM-DD format from date input
           if (typeof editedTransaction.date === 'string' && editedTransaction.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
             const [year, month, day] = editedTransaction.date.split('-')
-            dateToStore = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0).toISOString()
+            const originalDate = new Date(originalTransaction.date)
+            
+            // Use the selected date but preserve the original time (hours, minutes, seconds, ms)
+            dateToStore = new Date(
+              parseInt(year), 
+              parseInt(month) - 1, 
+              parseInt(day), 
+              originalDate.getHours(),
+              originalDate.getMinutes(),
+              originalDate.getSeconds(),
+              originalDate.getMilliseconds()
+            ).toISOString()
           } else {
             dateToStore = new Date(editedTransaction.date).toISOString()
           }
@@ -471,6 +494,8 @@ export default {
       await migrateFromLocalStorage()
       loadCustomColors()
       await loadTransactions()
+      // Emit categories to parent component
+      emit('categories-loaded', categories.value)
     })
 
     return {
