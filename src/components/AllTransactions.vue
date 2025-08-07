@@ -96,6 +96,17 @@
       @save="updateTransaction"
       @delete="deleteTransaction"
     />
+
+    <button class="add-transaction-btn" @click.stop="showAddModal = true">
+      +
+    </button>
+
+    <TransactionModal 
+      v-if="showAddModal"
+      @close="showAddModal = false"
+      @save="addTransaction"
+      :categories="categories"
+    />
     
   </div>
 </template>
@@ -104,11 +115,13 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { transactionService } from '../services/database.js'
 import EditTransactionModal from './EditTransactionModal.vue'
+import TransactionModal from './TransactionModal.vue'
 
 export default {
   name: 'AllTransactions',
   components: {
-    EditTransactionModal
+    EditTransactionModal,
+    TransactionModal
   },
   props: {
     categories: {
@@ -126,6 +139,7 @@ export default {
     const startDate = ref('')
     const endDate = ref('')
     const selectedTransaction = ref(null)
+    const showAddModal = ref(false)
 
     const filters = [
       { value: 'all', label: 'All' },
@@ -342,6 +356,28 @@ export default {
       // Trigger reactivity
     }
 
+    const addTransaction = async (transaction) => {
+      let dateToStore = new Date().toISOString()
+      if (transaction.date) {
+        if (typeof transaction.date === 'string' && transaction.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          const [year, month, day] = transaction.date.split('-')
+          dateToStore = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0).toISOString()
+        } else {
+          dateToStore = new Date(transaction.date).toISOString()
+        }
+      }
+      
+      const newTransaction = {
+        ...transaction,
+        id: Date.now(),
+        date: dateToStore
+      }
+      
+      await transactionService.add(newTransaction)
+      transactions.value.push(newTransaction)
+      showAddModal.value = false
+    }
+
     onMounted(() => {
       loadAllTransactions()
       loadCategories()
@@ -360,6 +396,7 @@ export default {
       startDate,
       endDate,
       selectedTransaction,
+      showAddModal,
       filters,
       filteredTransactions,
       getCategoryById,
@@ -372,6 +409,7 @@ export default {
       selectTransaction,
       updateTransaction,
       deleteTransaction,
+      addTransaction,
       applyFilters
     }
   }
@@ -381,8 +419,6 @@ export default {
 <style scoped>
 .all-transactions {
   padding: 1rem;
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
 }
 
 .filter-section {
@@ -665,6 +701,46 @@ export default {
   
   .date-input-group .date-picker {
     max-width: 100%;
+  }
+}
+
+.add-transaction-btn {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-transaction-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.add-transaction-btn:active {
+  transform: translateY(0) scale(0.95);
+}
+
+@media (max-width: 768px) {
+  .add-transaction-btn {
+    bottom: 1rem;
+    right: 1rem;
+    width: 4rem;
+    height: 4rem;
+    font-size: 1.5rem;
   }
 }
 </style>

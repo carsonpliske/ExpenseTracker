@@ -35,18 +35,34 @@
         </div>
       </div>
     </div>
+
+    <button class="add-transaction-btn" @click.stop="showAddModal = true">
+      +
+    </button>
+
+    <TransactionModal 
+      v-if="showAddModal"
+      @close="showAddModal = false"
+      @save="addTransaction"
+      :categories="categories"
+    />
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { transactionService, migrateFromLocalStorage } from '../services/database.js'
+import TransactionModal from './TransactionModal.vue'
 
 export default {
   name: 'AveragesTracker',
+  components: {
+    TransactionModal
+  },
   setup() {
     const selectedPeriod = ref('weekly')
     const transactions = ref([])
+    const showAddModal = ref(false)
 
     const periods = [
       { value: 'daily', label: 'Daily' },
@@ -158,6 +174,28 @@ export default {
       }
     }
 
+    const addTransaction = async (transaction) => {
+      let dateToStore = new Date().toISOString()
+      if (transaction.date) {
+        if (typeof transaction.date === 'string' && transaction.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          const [year, month, day] = transaction.date.split('-')
+          dateToStore = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0).toISOString()
+        } else {
+          dateToStore = new Date(transaction.date).toISOString()
+        }
+      }
+      
+      const newTransaction = {
+        ...transaction,
+        id: Date.now(),
+        date: dateToStore
+      }
+      
+      await transactionService.add(newTransaction)
+      transactions.value.push(newTransaction)
+      showAddModal.value = false
+    }
+
     onMounted(async () => {
       await migrateFromLocalStorage()
       await loadTransactions()
@@ -168,9 +206,11 @@ export default {
       periods,
       categories,
       transactions,
+      showAddModal,
       getCategoryAverage,
       getTotalAverage,
-      getCurrentPeriodLabel
+      getCurrentPeriodLabel,
+      addTransaction
     }
   }
 }
@@ -301,5 +341,45 @@ export default {
   
   .total-amount {
     font-size: 2.5rem;
+  }
+}
+
+.add-transaction-btn {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-transaction-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.add-transaction-btn:active {
+  transform: translateY(0) scale(0.95);
+}
+
+@media (max-width: 768px) {
+  .add-transaction-btn {
+    bottom: 1rem;
+    right: 1rem;
+    width: 4rem;
+    height: 4rem;
+    font-size: 1.5rem;
   }
 }</style>

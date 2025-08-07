@@ -119,6 +119,25 @@
         </div>
       </div>
     </div>
+
+    <button class="add-transaction-btn" @click.stop="showAddModal = true">
+      +
+    </button>
+
+    <!-- Add Modal for choosing what to add -->
+    <div v-if="showAddModal" class="modal-overlay" @click="showAddModal = false">
+      <div class="add-modal" @click.stop>
+        <h3>What would you like to add?</h3>
+        <div class="add-options">
+          <button class="add-option-btn" @click="addExpenseAndClose">
+            💰 Fixed Expense
+          </button>
+          <button class="add-option-btn" @click="addSubscriptionAndClose">
+            📱 Subscription
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -136,6 +155,7 @@ export default {
     })
     
     const transactions = ref([])
+    const showAddModal = ref(false)
 
     const variableCategories = [
       { id: 'groceries', name: 'Groceries', icon: '🛒', color: '#3B82F6' },
@@ -178,6 +198,16 @@ export default {
     const removeSubscription = async (index) => {
       budget.value.subscriptions.splice(index, 1)
       await saveBudget()
+    }
+
+    const addExpenseAndClose = async () => {
+      await addExpense()
+      showAddModal.value = false
+    }
+
+    const addSubscriptionAndClose = async () => {
+      await addSubscription()
+      showAddModal.value = false
     }
 
     const getTotalFixedExpenses = () => {
@@ -251,10 +281,13 @@ export default {
     return {
       budget,
       variableCategories,
+      showAddModal,
       addExpense,
       removeExpense,
       addSubscription,
       removeSubscription,
+      addExpenseAndClose,
+      addSubscriptionAndClose,
       getTotalFixedExpenses,
       getTotalVariableExpenses,
       getTotalSubscriptions,
@@ -308,5 +341,98 @@ input[type="text"], input[type="number"] {
 input[type="text"]:focus, input[type="number"]:focus {
   outline: none;
   border-color: var(--accent-purple);
+}
+
+.add-transaction-btn {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-transaction-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.add-transaction-btn:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.add-modal {
+  background: var(--surface-dark);
+  border-radius: 1rem;
+  padding: 2rem;
+  max-width: 300px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color);
+}
+
+.add-modal h3 {
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+  font-size: 1.2rem;
+}
+
+.add-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.add-option-btn {
+  padding: 1rem;
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-option-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+@media (max-width: 768px) {
+  .add-transaction-btn {
+    bottom: 1rem;
+    right: 1rem;
+    width: 4rem;
+    height: 4rem;
+    font-size: 1.5rem;
+  }
 }
 </style>
