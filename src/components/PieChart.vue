@@ -1,6 +1,9 @@
 <template>
   <div class="pie-chart" :class="size">
     <canvas ref="chartCanvas"></canvas>
+    <div class="center-text" v-if="totalAmount !== undefined">
+      <div class="total-amount">${{ totalAmount.toFixed(2) }}</div>
+    </div>
   </div>
 </template>
 
@@ -26,6 +29,10 @@ export default {
     size: {
       type: String,
       default: 'medium' // small, medium, large
+    },
+    totalAmount: {
+      type: Number,
+      default: undefined
     }
   },
   emits: ['slice-click', 'slice-long-press'],
@@ -131,6 +138,30 @@ export default {
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+}
+
+.center-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.total-amount {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+/* Responsive font sizes for different chart sizes */
+.pie-chart.small .total-amount {
+  font-size: 1.4rem;
+}
+
+.pie-chart.large .total-amount {
+  font-size: 2.2rem;
 }
 
 /* Size variants */

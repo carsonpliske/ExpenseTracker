@@ -22,7 +22,7 @@
           <select id="category" v-model="transaction.categoryId" required>
             <option value="">Select a category</option>
             <option 
-              v-for="category in categories" 
+              v-for="category in sortedCategories" 
               :key="category.id" 
               :value="category.id"
             >
@@ -65,7 +65,7 @@
 </template>
 
 <script>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 export default {
   name: 'TransactionModal',
@@ -73,6 +73,10 @@ export default {
     categories: {
       type: Array,
       required: true
+    },
+    transactions: {
+      type: Array,
+      default: () => []
     }
   },
   emits: ['close', 'save'],
@@ -93,6 +97,38 @@ export default {
       date: getCurrentLocalDate()
     })
 
+    // Calculate category usage frequency and sort categories
+    const sortedCategories = computed(() => {
+      // Count usage frequency for each category
+      const categoryUsage = {}
+      
+      // Initialize all categories with count 0
+      props.categories.forEach(cat => {
+        categoryUsage[cat.id] = 0
+      })
+      
+      // Count actual usage from transactions
+      props.transactions.forEach(transaction => {
+        if (categoryUsage.hasOwnProperty(transaction.categoryId)) {
+          categoryUsage[transaction.categoryId]++
+        }
+      })
+      
+      // Sort categories by usage frequency (most used first), then alphabetically
+      return [...props.categories].sort((a, b) => {
+        const usageA = categoryUsage[a.id] || 0
+        const usageB = categoryUsage[b.id] || 0
+        
+        // First sort by usage frequency (descending)
+        if (usageB !== usageA) {
+          return usageB - usageA
+        }
+        
+        // If same usage, sort alphabetically
+        return a.name.localeCompare(b.name)
+      })
+    })
+
     const saveTransaction = () => {
       if (transaction.value.amount && transaction.value.categoryId) {
         emit('save', { ...transaction.value })
@@ -107,7 +143,8 @@ export default {
 
     return {
       transaction,
-      saveTransaction
+      saveTransaction,
+      sortedCategories
     }
   }
 }

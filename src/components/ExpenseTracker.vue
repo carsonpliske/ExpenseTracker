@@ -12,17 +12,14 @@
       </button>
     </div>
 
-    <div class="expense-overview">
-      <div class="total-amount">${{ getTotalForPeriod().toFixed(2) }}</div>
-      <div class="period-label">{{ getCurrentPeriodLabel() }}</div>
-    </div>
-
     <!-- Mobile Layout -->
     <div class="mobile-layout">
+      <div class="period-label">{{ getCurrentPeriodLabel() }}</div>
       <div class="chart-container-center">
         <PieChart 
           :data="chartData" 
           size="large"
+          :total-amount="getTotalForPeriod()"
           @slice-click="handleSliceClick"
           @slice-long-press="handleSliceLongPress"
         />
@@ -39,10 +36,12 @@
     <!-- Desktop Split Layout -->
     <div class="desktop-layout">
       <div class="desktop-left">
+        <div class="period-label">{{ getCurrentPeriodLabel() }}</div>
         <div class="chart-section">
           <PieChart 
             :data="chartData" 
             size="large"
+            :total-amount="getTotalForPeriod()"
             @slice-click="handleSliceClick"
             @slice-long-press="handleSliceLongPress"
           />
@@ -96,6 +95,7 @@
       @close="closeAddModal"
       @save="addTransaction"
       :categories="categories"
+      :transactions="transactions"
     />
 
     <CategoryDetailModal
@@ -595,6 +595,14 @@ export default {
   }
 }
 
+.period-label {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
 @media (max-width: 768px) {
   .add-transaction-btn {
     bottom: 1rem;
@@ -602,6 +610,11 @@ export default {
     width: 4rem;
     height: 4rem;
     font-size: 1.5rem;
+  }
+  
+  .period-label {
+    font-size: 1rem;
+    margin-bottom: 0.8rem;
   }
 }
 </style>
