@@ -12,7 +12,13 @@
           class="legend-color" 
           :style="{ backgroundColor: item.color }"
         ></div>
-        <div class="legend-icon">{{ item.icon }}</div>
+        <div class="legend-icon">
+          <img v-if="item.iconType === 'image' && item.image" 
+               :src="item.image" 
+               alt="category icon" 
+               class="legend-category-image" />
+          <span v-else>{{ item.icon }}</span>
+        </div>
       </div>
       
       <div class="legend-content">
@@ -64,6 +70,8 @@ export default {
           return {
             ...item,
             icon: category?.icon || '📋',
+            iconType: category?.iconType,
+            image: category?.image,
             color: category?.color || '#64748B',
             percentage: total > 0 ? Math.round((item.amount / total) * 100) : 0
           }
@@ -127,6 +135,18 @@ export default {
 .legend-icon {
   font-size: 1.25rem;
   line-height: 1;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.legend-category-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 .legend-content {

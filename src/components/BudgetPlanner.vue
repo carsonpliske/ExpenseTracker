@@ -112,7 +112,12 @@
       <h3>Monthly Expenses</h3>
       <div class="budget-item" v-for="category in variableCategories" :key="category.id">
         <div class="category-info">
-          <span>{{ category.icon }} {{ category.name }}</span>
+          <span>
+            <span v-if="category.iconType === 'image' && category.image">
+              <img :src="category.image" alt="category icon" class="category-image-inline" />
+            </span>
+            <span v-else>{{ category.icon }} </span>{{ category.name }}
+          </span>
         </div>
         <div class="expense-amount">
           ${{ getMonthlySpendingForCategory(category.id).toFixed(2) }}
@@ -138,12 +143,35 @@
         </div>
       </div>
     </div>
+
+    <!-- Eye icon for clearing data (positioned at bottom of page content) -->
+    <div class="eye-container">
+      <button class="eye-btn" @click="showDeleteModal = true">
+        👁️
+      </button>
+    </div>
+
+    <!-- Delete confirmation modal -->
+    <div v-if="showDeleteModal" class="modal-overlay" @click="showDeleteModal = false">
+      <div class="delete-modal" @click.stop>
+        <h3>Delete All Data</h3>
+        <p>This will clear all your transactions, budget data, and custom categories. This cannot be undone.</p>
+        <div class="delete-options">
+          <button class="delete-confirm-btn" @click="clearAllData">
+            Sure
+          </button>
+          <button class="delete-cancel-btn" @click="showDeleteModal = false">
+            Nah
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted } from 'vue'
-import { budgetService, transactionService, migrateFromLocalStorage } from '../services/database.js'
+import { budgetService, transactionService, customCategoryService, migrateFromLocalStorage } from '../services/database.js'
 
 export default {
   name: 'BudgetPlanner',
@@ -156,6 +184,8 @@ export default {
     
     const transactions = ref([])
     const showAddModal = ref(false)
+    const showDeleteModal = ref(false)
+    const customCategories = ref([])
 
     const baseVariableCategoriesData = [
       { id: 'groceries', name: 'Groceries', icon: '🛒', darkColor: '#3B82F6', lightColor: '#1D4ED8' },
@@ -163,7 +193,6 @@ export default {
       { id: 'restaurant', name: 'Restaurant', icon: '🍽️', darkColor: '#8B5CF6', lightColor: '#7C3AED' },
       { id: 'health', name: 'Health', icon: '💚', darkColor: '#10B981', lightColor: '#059669' },
       { id: 'gifts', name: 'Gifts', icon: '🎁', darkColor: '#EF4444', lightColor: '#DC2626' },
-      { id: 'games', name: 'Games', icon: '🎮', darkColor: '#A855F7', lightColor: '#9333EA' },
       { id: 'shopping', name: 'Shopping', icon: '🛍️', darkColor: '#14B8A6', lightColor: '#0F766E' },
       { id: 'movies', name: 'Movies', icon: '🎬', darkColor: '#F97316', lightColor: '#EA580C' },
       { id: 'education', name: 'Education', icon: '📚', darkColor: '#6366F1', lightColor: '#4F46E5' },
@@ -180,10 +209,17 @@ export default {
 
     const variableCategories = computed(() => {
       const currentTheme = getCurrentTheme()
-      return baseVariableCategoriesData.map(cat => ({
+      const baseCategories = baseVariableCategoriesData.map(cat => ({
         ...cat,
         color: currentTheme === 'light' ? cat.lightColor : cat.darkColor
       }))
+      
+      const customCats = customCategories.value.map(cat => ({
+        ...cat,
+        color: currentTheme === 'light' ? cat.lightColor : cat.darkColor
+      }))
+      
+      return [...baseCategories, ...customCats]
     })
 
     const addExpense = async () => {
@@ -242,7 +278,7 @@ export default {
     }
 
     const getTotalVariableExpenses = () => {
-      return variableCategories.reduce((sum, category) => {
+      return variableCategories.value.reduce((sum, category) => {
         return sum + getMonthlySpendingForCategory(category.id)
       }, 0)
     }
@@ -284,16 +320,70 @@ export default {
       }
     }
 
+    const loadCustomCategories = async () => {
+      try {
+        customCategories.value = await customCategoryService.getAll()
+      } catch (error) {
+        console.error('Failed to load custom categories:', error)
+      }
+    }
+
+    const clearAllData = async () => {
+      try {
+        // Clear all transactions
+        await transactionService.clear()
+        
+        // Clear budget data
+        await budgetService.clear()
+        
+        // Clear custom categories
+        const customCats = await customCategoryService.getAll()
+        for (const cat of customCats) {
+          await customCategoryService.delete(cat.id)
+        }
+        
+        // Clear localStorage data as backup
+        localStorage.removeItem('expense-transactions')
+        localStorage.removeItem('expense-budget')
+        localStorage.removeItem('expense-tracker-custom-colors')
+        
+        // Reset local state
+        budget.value = {
+          income: 0,
+          fixedExpenses: [],
+          subscriptions: []
+        }
+        transactions.value = []
+        customCategories.value = []
+        
+        // Close modal
+        showDeleteModal.value = false
+        
+        console.log('All data cleared successfully')
+        
+        // Optionally reload the page to ensure clean state
+        setTimeout(() => {
+          window.location.reload()
+        }, 500)
+        
+      } catch (error) {
+        console.error('Failed to clear all data:', error)
+        alert('Failed to clear data. Please try again.')
+      }
+    }
+
     onMounted(async () => {
       await migrateFromLocalStorage()
       await loadBudget()
       await loadTransactions()
+      await loadCustomCategories()
     })
 
     return {
       budget,
       variableCategories,
       showAddModal,
+      showDeleteModal,
       addExpense,
       removeExpense,
       addSubscription,
@@ -306,7 +396,8 @@ export default {
       getTotalExpenses,
       calculatePotentialSavings,
       saveBudget,
-      getMonthlySpendingForCategory
+      getMonthlySpendingForCategory,
+      clearAllData
     }
   }
 }
@@ -353,6 +444,14 @@ input[type="text"], input[type="number"] {
 input[type="text"]:focus, input[type="number"]:focus {
   outline: none;
   border-color: var(--accent-purple);
+}
+
+.category-image-inline {
+  width: 1.2rem;
+  height: 1.2rem;
+  object-fit: cover;
+  border-radius: 50%;
+  margin-right: 0.5rem;
 }
 
 .add-transaction-btn {
@@ -438,6 +537,105 @@ input[type="text"]:focus, input[type="number"]:focus {
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 }
 
+/* Eye button container and button for clearing data */
+.eye-container {
+  margin-top: 3rem;
+  margin-bottom: 2rem;
+  text-align: left;
+  padding-left: 1rem;
+}
+
+.eye-btn {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3);
+  border: none;
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(5px);
+  opacity: 0.6;
+}
+
+.eye-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* Delete modal */
+.delete-modal {
+  background: var(--surface-dark);
+  border-radius: 1rem;
+  padding: 2rem;
+  max-width: 350px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color);
+}
+
+.delete-modal h3 {
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.delete-modal p {
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+.delete-options {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.delete-confirm-btn {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #DC2626, #B91C1C);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 80px;
+}
+
+.delete-confirm-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+.delete-cancel-btn {
+  padding: 0.75rem 1.5rem;
+  background: var(--surface-light);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 80px;
+}
+
+.delete-cancel-btn:hover {
+  transform: translateY(-2px);
+  background: var(--surface-lighter);
+}
+
 @media (max-width: 768px) {
   .add-transaction-btn {
     bottom: 1rem;
@@ -445,6 +643,17 @@ input[type="text"]:focus, input[type="number"]:focus {
     width: 4rem;
     height: 4rem;
     font-size: 1.5rem;
+  }
+  
+  .eye-container {
+    margin-top: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .eye-btn {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1.2rem;
   }
 }
 </style>

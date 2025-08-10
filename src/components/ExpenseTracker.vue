@@ -76,12 +76,30 @@
         >
           <div 
             class="category-icon" 
-            :style="{ backgroundColor: category.color }"
+            :style="{ backgroundColor: (category.iconType === 'image' && category.image) ? 'transparent' : category.color }"
           >
-            {{ category.icon }}
+            <img v-if="category.iconType === 'image' && category.image && category.image.length > 0" 
+                 :src="category.image" 
+                 alt="category icon" 
+                 class="category-image" />
+            <span v-else-if="category.iconType === 'image'">📁</span>
+            <span v-else-if="category.icon">{{ category.icon }}</span>
+            <span v-else>📋</span>
           </div>
           <div class="category-name">{{ category.name }}</div>
           <div class="category-amount">${{ getCategoryTotal(category.id).toFixed(2) }}</div>
+        </div>
+        
+        <!-- Add Category Button -->
+        <div 
+          class="category-item add-category-item"
+          @click.stop="openAddCategoryModal"
+        >
+          <div class="category-icon add-category-icon">
+            +
+          </div>
+          <div class="category-name">Add Category</div>
+          <div class="category-amount"></div>
         </div>
       </div>
     </div>
@@ -125,6 +143,12 @@
       @close="closeColorPicker"
       @save="saveColor"
     />
+
+    <AddCategoryModal
+      v-if="showAddCategoryModal"
+      @close="closeAddCategoryModal"
+      @save="handleCategorySaved"
+    />
   </div>
 </template>
 
@@ -134,10 +158,11 @@ import TransactionModal from './TransactionModal.vue'
 import CategoryDetailModal from './CategoryDetailModal.vue'
 import EditTransactionModal from './EditTransactionModal.vue'
 import ColorPickerModal from './ColorPickerModal.vue'
+import AddCategoryModal from './AddCategoryModal.vue'
 import PieChart from './PieChart.vue'
 import EnhancedLegend from './EnhancedLegend.vue'
 import SpendingInsights from './SpendingInsights.vue'
-import { transactionService, migrateFromLocalStorage } from '../services/database.js'
+import { transactionService, customCategoryService, migrateFromLocalStorage } from '../services/database.js'
 
 export default {
   name: 'ExpenseTracker',
@@ -146,6 +171,7 @@ export default {
     CategoryDetailModal,
     EditTransactionModal,
     ColorPickerModal,
+    AddCategoryModal,
     PieChart,
     EnhancedLegend,
     SpendingInsights
@@ -162,6 +188,8 @@ export default {
     const selectedTransaction = ref(null)
     const showColorPicker = ref(false)
     const colorPickerCategory = ref(null)
+    const showAddCategoryModal = ref(false)
+    const customCategories = ref([])
 
     const periods = [
       { value: 'daily', label: 'Daily' },
@@ -177,7 +205,6 @@ export default {
       { id: 'restaurant', name: 'Restaurant', icon: '🍽️', darkColor: '#8B5CF6', lightColor: '#7C3AED' },
       { id: 'health', name: 'Health', icon: '💚', darkColor: '#10B981', lightColor: '#059669' },
       { id: 'gifts', name: 'Gifts', icon: '🎁', darkColor: '#EF4444', lightColor: '#DC2626' },
-      { id: 'games', name: 'Games', icon: '🎮', darkColor: '#A855F7', lightColor: '#9333EA' },
       { id: 'shopping', name: 'Shopping', icon: '🛍️', darkColor: '#14B8A6', lightColor: '#0F766E' },
       { id: 'movies', name: 'Movies', icon: '🎬', darkColor: '#F97316', lightColor: '#EA580C' },
       { id: 'education', name: 'Education', icon: '📚', darkColor: '#6366F1', lightColor: '#4F46E5' },
@@ -194,10 +221,17 @@ export default {
 
     const categories = computed(() => {
       const currentTheme = getCurrentTheme()
-      return baseCategoriesData.map(cat => ({
+      const baseCategories = baseCategoriesData.map(cat => ({
         ...cat,
         color: currentTheme === 'light' ? cat.lightColor : cat.darkColor
       }))
+      
+      const customCats = customCategories.value.map(cat => ({
+        ...cat,
+        color: currentTheme === 'light' ? cat.lightColor : cat.darkColor
+      }))
+      
+      return [...baseCategories, ...customCats]
     })
 
     const getTotalForPeriod = () => {
@@ -409,6 +443,22 @@ export default {
       showAddModal.value = false
     }
 
+    const openAddCategoryModal = () => {
+      showAddCategoryModal.value = true
+    }
+
+    const closeAddCategoryModal = () => {
+      showAddCategoryModal.value = false
+    }
+
+    const handleCategorySaved = async (category) => {
+      closeAddCategoryModal()
+      // Reload custom categories
+      await loadCustomCategories()
+      // Emit updated categories to parent
+      emit('categories-loaded', categories.value)
+    }
+
     const selectCategory = (category) => {
       selectedCategory.value = category
       showCategoryDetail.value = true
@@ -486,6 +536,14 @@ export default {
       }
     }
 
+    const loadCustomCategories = async () => {
+      try {
+        customCategories.value = await customCategoryService.getAll()
+      } catch (error) {
+        console.error('Failed to load custom categories:', error)
+      }
+    }
+
     const loadCustomColors = () => {
       try {
         const customColors = localStorage.getItem('expense-tracker-custom-colors')
@@ -506,6 +564,7 @@ export default {
       await migrateFromLocalStorage()
       loadCustomColors()
       await loadTransactions()
+      await loadCustomCategories()
       // Emit categories to parent component
       emit('categories-loaded', categories.value)
     })
@@ -543,7 +602,11 @@ export default {
       showColorPicker,
       colorPickerCategory,
       closeColorPicker,
-      saveColor
+      saveColor,
+      showAddCategoryModal,
+      openAddCategoryModal,
+      closeAddCategoryModal,
+      handleCategorySaved
     }
   }
 }
@@ -601,6 +664,13 @@ export default {
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 1rem;
+}
+
+.category-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 @media (max-width: 768px) {
