@@ -9,6 +9,12 @@ class ExpenseTrackerDB extends Dexie {
       transactions: '++id, amount, categoryId, description, date',
       budget: '++id, income, fixedExpenses, subscriptions'
     })
+    
+    this.version(2).stores({
+      transactions: '++id, amount, categoryId, description, date',
+      budget: '++id, income, fixedExpenses, subscriptions',
+      customCategories: '++id, name, icon, image, iconType, darkColor, lightColor, isCustom'
+    })
   }
 }
 
@@ -142,6 +148,50 @@ export const migrateFromLocalStorage = async () => {
   } catch (error) {
     console.error('Migration failed:', error)
     return false
+  }
+}
+
+// Custom category methods
+export const customCategoryService = {
+  async getAll() {
+    try {
+      return await db.customCategories.toArray()
+    } catch (error) {
+      console.error('Error getting custom categories:', error)
+      return []
+    }
+  },
+  
+  async add(category) {
+    try {
+      const id = await db.customCategories.add({
+        ...category,
+        id: category.id || `custom_${Date.now()}`,
+        isCustom: true
+      })
+      return id
+    } catch (error) {
+      console.error('Error adding custom category:', error)
+      throw error
+    }
+  },
+  
+  async update(category) {
+    try {
+      return await db.customCategories.put(category)
+    } catch (error) {
+      console.error('Error updating custom category:', error)
+      throw error
+    }
+  },
+  
+  async delete(id) {
+    try {
+      return await db.customCategories.delete(id)
+    } catch (error) {
+      console.error('Error deleting custom category:', error)
+      throw error
+    }
   }
 }
 
