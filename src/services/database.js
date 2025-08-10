@@ -94,10 +94,13 @@ export const budgetService = {
   
   async save(budgetData) {
     try {
-      const existing = await budgetService.get()
-      if (existing.id) {
-        return await db.budget.put({ ...budgetData, id: existing.id })
+      // Check if any budget records exist
+      const existingBudgets = await db.budget.toArray()
+      if (existingBudgets.length > 0) {
+        // Update existing budget
+        return await db.budget.put({ ...budgetData, id: existingBudgets[0].id })
       } else {
+        // Create new budget
         return await db.budget.add(budgetData)
       }
     } catch (error) {
