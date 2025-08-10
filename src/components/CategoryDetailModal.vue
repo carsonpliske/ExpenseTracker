@@ -91,6 +91,7 @@
         v-if="showEditModal && transactionToEdit"
         :transaction="transactionToEdit"
         :categories="allCategories"
+        :transactions="transactions"
         @close="closeEditModal"
         @save="saveEditedTransaction"
       />

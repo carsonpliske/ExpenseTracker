@@ -61,13 +61,6 @@
           ×
         </button>
       </div>
-      <button 
-        @click="addExpense" 
-        class="btn btn-secondary" 
-        style="width: 100%; margin-top: 1rem;"
-      >
-        + Add Fixed Expense
-      </button>
     </div>
 
     <div class="budget-section">
@@ -99,13 +92,6 @@
           ×
         </button>
       </div>
-      <button 
-        @click="addSubscription" 
-        class="btn btn-secondary" 
-        style="width: 100%; margin-top: 1rem;"
-      >
-        + Add Subscription
-      </button>
     </div>
 
     <div class="budget-section">
@@ -125,21 +111,97 @@
       </div>
     </div>
 
-    <button class="add-transaction-btn" @click.stop="showAddModal = true">
+    <button class="add-transaction-btn" @click.stop="openAddModal">
       +
     </button>
 
     <!-- Add Modal for choosing what to add -->
-    <div v-if="showAddModal" class="modal-overlay" @click="showAddModal = false">
+    <div v-if="showAddModal" class="modal-overlay" @click="closeAddModal">
       <div class="add-modal" @click.stop>
-        <h3>What would you like to add?</h3>
-        <div class="add-options">
-          <button class="add-option-btn" @click="addExpenseAndClose">
-            💰 Fixed Expense
-          </button>
-          <button class="add-option-btn" @click="addSubscriptionAndClose">
-            📱 Subscription
-          </button>
+        <!-- Initial selection screen -->
+        <div v-if="!selectedAddType">
+          <h3>What would you like to add?</h3>
+          <div class="add-options">
+            <button class="add-option-btn" @click="selectedAddType = 'expense'">
+              💰 Fixed Expense
+            </button>
+            <button class="add-option-btn" @click="selectedAddType = 'subscription'">
+              📱 Subscription
+            </button>
+            <button class="add-option-btn" @click="openTransactionModal">
+              🧾 Transaction
+            </button>
+          </div>
+        </div>
+
+        <!-- Fixed Expense Form -->
+        <div v-if="selectedAddType === 'expense'">
+          <h3>Add Fixed Expense</h3>
+          <form @submit.prevent="saveExpense">
+            <div class="form-group">
+              <label>Name</label>
+              <input 
+                v-model="newExpense.name"
+                type="text" 
+                placeholder="e.g., Rent, Car Payment"
+                required
+                ref="expenseNameInput"
+              />
+            </div>
+            <div class="form-group">
+              <label>Monthly Amount ($)</label>
+              <input 
+                v-model.number="newExpense.amount"
+                type="number" 
+                step="0.01"
+                placeholder="0.00"
+                required
+              />
+            </div>
+            <div class="form-actions">
+              <button type="button" @click="resetAddModal" class="btn-secondary">
+                Back
+              </button>
+              <button type="submit" class="btn-primary">
+                Add Expense
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Subscription Form -->
+        <div v-if="selectedAddType === 'subscription'">
+          <h3>Add Subscription</h3>
+          <form @submit.prevent="saveSubscription">
+            <div class="form-group">
+              <label>Service Name</label>
+              <input 
+                v-model="newSubscription.name"
+                type="text" 
+                placeholder="e.g., Netflix, Spotify"
+                required
+                ref="subscriptionNameInput"
+              />
+            </div>
+            <div class="form-group">
+              <label>Monthly Amount ($)</label>
+              <input 
+                v-model.number="newSubscription.amount"
+                type="number" 
+                step="0.01"
+                placeholder="0.00"
+                required
+              />
+            </div>
+            <div class="form-actions">
+              <button type="button" @click="resetAddModal" class="btn-secondary">
+                Back
+              </button>
+              <button type="submit" class="btn-primary">
+                Add Subscription
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -166,15 +228,28 @@
         </div>
       </div>
     </div>
+
+    <!-- Transaction Modal -->
+    <TransactionModal 
+      v-if="showTransactionModal"
+      @close="closeTransactionModal"
+      @save="addTransaction"
+      :categories="allCategories"
+      :transactions="transactions"
+    />
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { budgetService, transactionService, customCategoryService, migrateFromLocalStorage } from '../services/database.js'
+import TransactionModal from './TransactionModal.vue'
 
 export default {
   name: 'BudgetPlanner',
+  components: {
+    TransactionModal
+  },
   setup() {
     const budget = ref({
       income: 0,
@@ -185,6 +260,10 @@ export default {
     const transactions = ref([])
     const showAddModal = ref(false)
     const showDeleteModal = ref(false)
+    const showTransactionModal = ref(false)
+    const selectedAddType = ref(null)
+    const newExpense = ref({ name: '', amount: '' })
+    const newSubscription = ref({ name: '', amount: '' })
     const customCategories = ref([])
     let saveTimeout = null
 
@@ -203,6 +282,11 @@ export default {
       { id: 'other', name: 'Other', icon: '📋', darkColor: '#64748B', lightColor: '#475569' }
     ]
 
+    const baseCategoriesData = [
+      { id: 'rent', name: 'Rent', icon: '🏠', darkColor: '#DC2626', lightColor: '#991B1B' },
+      ...baseVariableCategoriesData
+    ]
+
     // Get current theme
     const getCurrentTheme = () => {
       return document.documentElement.getAttribute('data-theme') || 'dark'
@@ -211,6 +295,30 @@ export default {
     const variableCategories = computed(() => {
       const currentTheme = getCurrentTheme()
       const baseCategories = baseVariableCategoriesData.map(cat => ({
+        ...cat,
+        color: currentTheme === 'light' ? cat.lightColor : cat.darkColor
+      }))
+      
+      const customCats = customCategories.value.map(cat => ({
+        ...cat,
+        color: currentTheme === 'light' ? cat.lightColor : cat.darkColor
+      }))
+      
+      const allCategories = [...baseCategories, ...customCats]
+      
+      // Sort by spending amount (highest first), only show categories with spending > 0
+      return allCategories
+        .filter(category => getMonthlySpendingForCategory(category.id) > 0)
+        .sort((a, b) => {
+          const amountA = getMonthlySpendingForCategory(a.id)
+          const amountB = getMonthlySpendingForCategory(b.id)
+          return amountB - amountA // Sort descending (highest first)
+        })
+    })
+
+    const allCategories = computed(() => {
+      const currentTheme = getCurrentTheme()
+      const baseCategories = baseCategoriesData.map(cat => ({
         ...cat,
         color: currentTheme === 'light' ? cat.lightColor : cat.darkColor
       }))
@@ -249,14 +357,91 @@ export default {
       await saveBudget()
     }
 
-    const addExpenseAndClose = async () => {
-      await addExpense()
-      showAddModal.value = false
+    const resetAddModal = () => {
+      selectedAddType.value = null
+      newExpense.value = { name: '', amount: '' }
+      newSubscription.value = { name: '', amount: '' }
     }
 
-    const addSubscriptionAndClose = async () => {
-      await addSubscription()
+    const saveExpense = async () => {
+      if (newExpense.value.name && newExpense.value.amount && Number(newExpense.value.amount) > 0) {
+        budget.value.fixedExpenses.push({
+          name: newExpense.value.name,
+          amount: Number(newExpense.value.amount)
+        })
+        await saveBudget()
+        showAddModal.value = false
+        resetAddModal()
+      }
+    }
+
+    const saveSubscription = async () => {
+      if (newSubscription.value.name && newSubscription.value.amount && Number(newSubscription.value.amount) > 0) {
+        budget.value.subscriptions.push({
+          name: newSubscription.value.name,
+          amount: Number(newSubscription.value.amount)
+        })
+        await saveBudget()
+        showAddModal.value = false
+        resetAddModal()
+      }
+    }
+
+    const openAddModal = () => {
+      resetAddModal()
+      showAddModal.value = true
+    }
+
+    const closeAddModal = () => {
       showAddModal.value = false
+      resetAddModal()
+    }
+
+    const openTransactionModal = () => {
+      showAddModal.value = false
+      showTransactionModal.value = true
+    }
+
+    const closeTransactionModal = () => {
+      showTransactionModal.value = false
+    }
+
+    const addTransaction = async (transaction) => {
+      // Handle date properly to preserve creation time for sorting
+      let dateToStore = new Date().toISOString()
+      if (transaction.date) {
+        // If user selected a specific date, use that date but preserve the current time
+        if (typeof transaction.date === 'string' && transaction.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          const [year, month, day] = transaction.date.split('-')
+          const now = new Date()
+          // Use the selected date but keep the current time (hours, minutes, seconds, ms)
+          dateToStore = new Date(
+            parseInt(year), 
+            parseInt(month) - 1, 
+            parseInt(day), 
+            now.getHours(),
+            now.getMinutes(),
+            now.getSeconds(),
+            now.getMilliseconds()
+          ).toISOString()
+        } else {
+          dateToStore = new Date(transaction.date).toISOString()
+        }
+      }
+      
+      const newTransaction = {
+        ...transaction,
+        id: Date.now(),
+        date: dateToStore
+      }
+      
+      try {
+        await transactionService.add(newTransaction)
+        transactions.value.push(newTransaction)
+        showTransactionModal.value = false
+      } catch (error) {
+        console.error('Failed to add transaction:', error)
+      }
     }
 
     const getTotalFixedExpenses = () => {
@@ -395,14 +580,26 @@ export default {
     return {
       budget,
       variableCategories,
+      allCategories,
+      transactions,
       showAddModal,
       showDeleteModal,
+      showTransactionModal,
+      selectedAddType,
+      newExpense,
+      newSubscription,
       addExpense,
       removeExpense,
       addSubscription,
       removeSubscription,
-      addExpenseAndClose,
-      addSubscriptionAndClose,
+      openAddModal,
+      closeAddModal,
+      resetAddModal,
+      saveExpense,
+      saveSubscription,
+      openTransactionModal,
+      closeTransactionModal,
+      addTransaction,
       getTotalFixedExpenses,
       getTotalVariableExpenses,
       getTotalSubscriptions,
@@ -548,6 +745,75 @@ input[type="text"]:focus, input[type="number"]:focus {
 .add-option-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+/* Form styling within modal */
+.form-group {
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--border-color);
+  border-radius: 0.5rem;
+  background: var(--surface-light);
+  color: var(--text-primary);
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--accent-purple);
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  justify-content: space-between;
+}
+
+.btn-primary, .btn-secondary {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.btn-primary {
+  background: var(--accent-purple);
+  color: white;
+  flex: 1;
+}
+
+.btn-primary:hover {
+  background: var(--accent-purple-dark);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: var(--surface-light);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background: var(--background-dark);
+  color: var(--text-primary);
 }
 
 /* Eye button container and button for clearing data */
