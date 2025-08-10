@@ -59,6 +59,9 @@
         <ExpenseTracker v-if="activeTab === 'expenses'" @categories-loaded="handleCategoriesLoaded" />
         <BudgetPlanner v-if="activeTab === 'budget'" />
         <AveragesTracker v-if="activeTab === 'averages'" />
+        
+        <!-- Version number at bottom of content -->
+        <div class="version-number">v1.0.0</div>
       </div>
     </div>
   </div>
@@ -71,6 +74,7 @@ import BudgetPlanner from './components/BudgetPlanner.vue'
 import AveragesTracker from './components/AveragesTracker.vue'
 import AllTransactions from './components/AllTransactions.vue'
 import ThemeToggle from './components/ThemeToggle.vue'
+import { customCategoryService } from './services/database.js'
 
 export default {
   name: 'App',
@@ -127,26 +131,67 @@ export default {
       }
     }
 
-    const handleCategoriesLoaded = (loadedCategories) => {
+    const handleCategoriesLoaded = async (loadedCategories) => {
       console.log('Categories loaded in App.vue:', loadedCategories)
       categories.value = loadedCategories
     }
 
-    // Load categories immediately if they don't exist - get the real current categories
-    const loadCategoriesIfNeeded = () => {
-      if (categories.value.length === 0) {
-        // Force load the ExpenseTracker component to get real categories
-        // This is a workaround - we should get categories from ExpenseTracker
-        console.log('Categories not loaded yet, will load from ExpenseTracker')
-        // Don't set default categories here, let ExpenseTracker provide them
+    // Load categories from database
+    const loadCategories = async () => {
+      try {
+        // Load base categories (same as in ExpenseTracker)
+        const baseCategoriesData = [
+          { id: 'rent', name: 'Rent', icon: '🏠', darkColor: '#DC2626', lightColor: '#991B1B' },
+          { id: 'groceries', name: 'Groceries', icon: '🛒', darkColor: '#3B82F6', lightColor: '#1D4ED8' },
+          { id: 'transport', name: 'Transport', icon: '🚗', darkColor: '#F59E0B', lightColor: '#D97706' },
+          { id: 'restaurant', name: 'Restaurant', icon: '🍽️', darkColor: '#8B5CF6', lightColor: '#7C3AED' },
+          { id: 'health', name: 'Health', icon: '💚', darkColor: '#10B981', lightColor: '#059669' },
+          { id: 'gifts', name: 'Gifts', icon: '🎁', darkColor: '#EF4444', lightColor: '#DC2626' },
+          { id: 'shopping', name: 'Shopping', icon: '🛍️', darkColor: '#14B8A6', lightColor: '#0F766E' },
+          { id: 'movies', name: 'Movies', icon: '🎬', darkColor: '#F97316', lightColor: '#EA580C' },
+          { id: 'education', name: 'Education', icon: '📚', darkColor: '#6366F1', lightColor: '#4F46E5' },
+          { id: 'traveling', name: 'Traveling', icon: '✈️', darkColor: '#06B6D4', lightColor: '#0284C7' },
+          { id: 'electric', name: 'Electric', icon: '⚡', darkColor: '#FACC15', lightColor: '#CA8A04' },
+          { id: 'water', name: 'Water', icon: '💧', darkColor: '#0EA5E9', lightColor: '#0369A1' },
+          { id: 'other', name: 'Other', icon: '📋', darkColor: '#64748B', lightColor: '#475569' }
+        ]
+        
+        // Load custom categories
+        const customCategories = await customCategoryService.getAll()
+        
+        // Get current theme
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark'
+        
+        // Merge and apply theme colors
+        const baseCategories = baseCategoriesData.map(cat => ({
+          ...cat,
+          color: currentTheme === 'light' ? cat.lightColor : cat.darkColor
+        }))
+        
+        const customCats = customCategories.map(cat => ({
+          ...cat,
+          color: currentTheme === 'light' ? cat.lightColor : cat.darkColor
+        }))
+        
+        categories.value = [...baseCategories, ...customCats]
+      } catch (error) {
+        console.error('Failed to load categories in App.vue:', error)
       }
     }
 
     // Remove complex auto-switching logic - let AllTransactions handle its own categories
 
-    // Initialize theme on mount
-    onMounted(() => {
+    // Initialize theme and categories on mount
+    onMounted(async () => {
       loadTheme()
+      await loadCategories()
+    })
+
+    // Watch for tab changes to ensure categories are loaded
+    watch(activeTab, async (newTab) => {
+      if (newTab === 'all-transactions' && categories.value.length === 0) {
+        await loadCategories()
+      }
     })
 
     return {
@@ -224,5 +269,17 @@ export default {
     padding: 0.65rem;
     font-size: 0.95rem;
   }
+}
+
+/* Version number */
+.version-number {
+  text-align: center;
+  padding: 2rem 0 1rem 0;
+  margin-top: 3rem;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  font-weight: 400;
+  letter-spacing: 0.5px;
 }
 </style>
