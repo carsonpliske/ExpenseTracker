@@ -72,18 +72,21 @@ export const transactionService = {
   }
 }
 
-// Budget methods
+// Budget methods - using localStorage for reliability
 export const budgetService = {
-  async get() {
+  get() {
     try {
-      const budgets = await db.budget.toArray()
-      return budgets.length > 0 ? budgets[0] : {
+      const savedBudget = localStorage.getItem('expense-budget')
+      if (savedBudget) {
+        return JSON.parse(savedBudget)
+      }
+      return {
         income: 0,
         fixedExpenses: [],
         subscriptions: []
       }
     } catch (error) {
-      console.error('Error getting budget:', error)
+      console.error('Error getting budget from localStorage:', error)
       return {
         income: 0,
         fixedExpenses: [],
@@ -92,28 +95,24 @@ export const budgetService = {
     }
   },
   
-  async save(budgetData) {
+  save(budgetData) {
     try {
-      // Check if any budget records exist
-      const existingBudgets = await db.budget.toArray()
-      if (existingBudgets.length > 0) {
-        // Update existing budget
-        return await db.budget.put({ ...budgetData, id: existingBudgets[0].id })
-      } else {
-        // Create new budget
-        return await db.budget.add(budgetData)
-      }
+      console.log('Saving budget to localStorage:', budgetData)
+      localStorage.setItem('expense-budget', JSON.stringify(budgetData))
+      console.log('Budget saved successfully to localStorage')
+      return Promise.resolve()
     } catch (error) {
-      console.error('Error saving budget:', error)
+      console.error('Error saving budget to localStorage:', error)
       throw error
     }
   },
   
-  async clear() {
+  clear() {
     try {
-      return await db.budget.clear()
+      localStorage.removeItem('expense-budget')
+      return Promise.resolve()
     } catch (error) {
-      console.error('Error clearing budget:', error)
+      console.error('Error clearing budget from localStorage:', error)
       throw error
     }
   }

@@ -331,30 +331,30 @@ export default {
       return [...baseCategories, ...customCats]
     })
 
-    const addExpense = async () => {
+    const addExpense = () => {
       budget.value.fixedExpenses.push({
         name: '',
         amount: 0
       })
-      await saveBudget()
+      saveBudget()
     }
 
-    const removeExpense = async (index) => {
+    const removeExpense = (index) => {
       budget.value.fixedExpenses.splice(index, 1)
-      await saveBudget()
+      saveBudget()
     }
 
-    const addSubscription = async () => {
+    const addSubscription = () => {
       budget.value.subscriptions.push({
         name: '',
         amount: 0
       })
-      await saveBudget()
+      saveBudget()
     }
 
-    const removeSubscription = async (index) => {
+    const removeSubscription = (index) => {
       budget.value.subscriptions.splice(index, 1)
-      await saveBudget()
+      saveBudget()
     }
 
     const resetAddModal = () => {
@@ -363,25 +363,25 @@ export default {
       newSubscription.value = { name: '', amount: '' }
     }
 
-    const saveExpense = async () => {
+    const saveExpense = () => {
       if (newExpense.value.name && newExpense.value.amount && Number(newExpense.value.amount) > 0) {
         budget.value.fixedExpenses.push({
           name: newExpense.value.name,
           amount: Number(newExpense.value.amount)
         })
-        await saveBudget()
+        saveBudget()
         showAddModal.value = false
         resetAddModal()
       }
     }
 
-    const saveSubscription = async () => {
+    const saveSubscription = () => {
       if (newSubscription.value.name && newSubscription.value.amount && Number(newSubscription.value.amount) > 0) {
         budget.value.subscriptions.push({
           name: newSubscription.value.name,
           amount: Number(newSubscription.value.amount)
         })
-        await saveBudget()
+        saveBudget()
         showAddModal.value = false
         resetAddModal()
       }
@@ -481,17 +481,17 @@ export default {
       return (budget.value.income || 0) - getTotalExpenses()
     }
 
-    const saveBudget = async () => {
+    const saveBudget = () => {
       // Clear existing timeout
       if (saveTimeout) {
         clearTimeout(saveTimeout)
       }
       
       // Debounce save to avoid rapid fire saves
-      saveTimeout = setTimeout(async () => {
+      saveTimeout = setTimeout(() => {
         try {
           console.log('Saving budget data:', budget.value)
-          await budgetService.save(budget.value)
+          budgetService.save(budget.value)
           console.log('Budget saved successfully')
         } catch (error) {
           console.error('Failed to save budget:', error)
@@ -499,9 +499,9 @@ export default {
       }, 500) // Wait 500ms after last input before saving
     }
 
-    const loadBudget = async () => {
+    const loadBudget = () => {
       try {
-        const savedBudget = await budgetService.get()
+        const savedBudget = budgetService.get()
         console.log('Loaded budget data:', savedBudget)
         budget.value = { ...budget.value, ...savedBudget }
         console.log('Budget state after loading:', budget.value)
@@ -572,7 +572,7 @@ export default {
 
     onMounted(async () => {
       await migrateFromLocalStorage()
-      await loadBudget()
+      loadBudget()
       await loadTransactions()
       await loadCustomCategories()
     })
