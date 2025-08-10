@@ -19,16 +19,46 @@
 
         <div class="form-group">
           <label for="category">Category</label>
-          <select id="category" v-model="transaction.categoryId" required>
-            <option value="">Select a category</option>
-            <option 
-              v-for="category in sortedCategories" 
-              :key="category.id" 
-              :value="category.id"
+          <div class="custom-select-wrapper">
+            <div 
+              class="custom-select" 
+              :class="{ open: showCategoryDropdown }"
+              @click="showCategoryDropdown = !showCategoryDropdown"
             >
-              {{ category.icon }} {{ category.name }}
-            </option>
-          </select>
+              <div class="selected-category">
+                <div v-if="selectedCategory" class="category-display">
+                  <div class="category-icon-small" :style="{ backgroundColor: (selectedCategory.iconType === 'image' && selectedCategory.image) ? 'transparent' : selectedCategory.color }">
+                    <img v-if="selectedCategory.iconType === 'image' && selectedCategory.image" 
+                         :src="selectedCategory.image" 
+                         alt="category icon" 
+                         class="category-image-small" />
+                    <span v-else>{{ selectedCategory.icon }}</span>
+                  </div>
+                  <span>{{ selectedCategory.name }}</span>
+                </div>
+                <span v-else class="placeholder">Select a category</span>
+                <span class="dropdown-arrow">▼</span>
+              </div>
+            </div>
+            
+            <div v-if="showCategoryDropdown" class="dropdown-menu">
+              <div 
+                v-for="category in sortedCategories" 
+                :key="category.id"
+                class="dropdown-item"
+                @click="selectCategory(category)"
+              >
+                <div class="category-icon-small" :style="{ backgroundColor: (category.iconType === 'image' && category.image) ? 'transparent' : category.color }">
+                  <img v-if="category.iconType === 'image' && category.image" 
+                       :src="category.image" 
+                       alt="category icon" 
+                       class="category-image-small" />
+                  <span v-else>{{ category.icon }}</span>
+                </div>
+                <span>{{ category.name }}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -96,6 +126,9 @@ export default {
       description: '',
       date: getCurrentLocalDate()
     })
+    
+    const showCategoryDropdown = ref(false)
+    const selectedCategory = ref(null)
 
     // Calculate category usage frequency and sort categories
     const sortedCategories = computed(() => {
@@ -129,6 +162,12 @@ export default {
       })
     })
 
+    const selectCategory = (category) => {
+      selectedCategory.value = category
+      transaction.value.categoryId = category.id
+      showCategoryDropdown.value = false
+    }
+
     const saveTransaction = () => {
       if (transaction.value.amount && transaction.value.categoryId) {
         emit('save', { ...transaction.value })
@@ -138,14 +177,116 @@ export default {
           description: '',
           date: getCurrentLocalDate()
         }
+        selectedCategory.value = null
       }
     }
 
     return {
       transaction,
+      showCategoryDropdown,
+      selectedCategory,
+      selectCategory,
       saveTransaction,
       sortedCategories
     }
   }
 }
 </script>
+
+<style scoped>
+.custom-select-wrapper {
+  position: relative;
+}
+
+.custom-select {
+  border: 2px solid var(--border-color);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  background: var(--surface-dark);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.custom-select:hover {
+  border-color: var(--accent-purple);
+}
+
+.custom-select.open {
+  border-color: var(--accent-purple);
+}
+
+.selected-category {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.category-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.category-icon-small {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: white;
+  flex-shrink: 0;
+}
+
+.category-image-small {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.placeholder {
+  color: var(--text-secondary);
+}
+
+.dropdown-arrow {
+  color: var(--text-secondary);
+  transition: transform 0.2s;
+}
+
+.custom-select.open .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--surface-dark);
+  border: 2px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 0.5rem 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.dropdown-item {
+  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background: var(--surface-light);
+}
+
+.dropdown-item:last-child {
+  border-radius: 0 0 0.5rem 0.5rem;
+}
+</style>

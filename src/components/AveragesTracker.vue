@@ -20,15 +20,18 @@
     <div class="categories-container">
       <div class="categories-grid">
         <div 
-          v-for="category in categories" 
+          v-for="category in sortedCategories" 
           :key="category.id"
           class="category-item"
         >
           <div 
             class="category-icon" 
-            :style="{ backgroundColor: category.color }"
+            :style="{ backgroundColor: category.iconType === 'image' ? 'transparent' : category.color }"
           >
-            {{ category.icon }}
+            <span v-if="category.iconType === 'image' && category.image">
+              <img :src="category.image" alt="category icon" class="category-image" />
+            </span>
+            <span v-else>{{ category.icon }}</span>
           </div>
           <div class="category-name">{{ category.name }}</div>
           <div class="category-amount">${{ getCategoryAverage(category.id).toFixed(2) }}</div>
@@ -45,13 +48,14 @@
       @close="showAddModal = false"
       @save="addTransaction"
       :categories="categories"
+      :transactions="transactions"
     />
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted } from 'vue'
-import { transactionService, migrateFromLocalStorage } from '../services/database.js'
+import { transactionService, customCategoryService, migrateFromLocalStorage } from '../services/database.js'
 import TransactionModal from './TransactionModal.vue'
 
 export default {
@@ -63,6 +67,7 @@ export default {
     const selectedPeriod = ref('weekly')
     const transactions = ref([])
     const showAddModal = ref(false)
+    const customCategories = ref([])
 
     const periods = [
       { value: 'daily', label: 'Daily' },
@@ -78,7 +83,6 @@ export default {
       { id: 'restaurant', name: 'Restaurant', icon: '🍽️', darkColor: '#8B5CF6', lightColor: '#7C3AED' },
       { id: 'health', name: 'Health', icon: '💚', darkColor: '#10B981', lightColor: '#059669' },
       { id: 'gifts', name: 'Gifts', icon: '🎁', darkColor: '#EF4444', lightColor: '#DC2626' },
-      { id: 'games', name: 'Games', icon: '🎮', darkColor: '#A855F7', lightColor: '#9333EA' },
       { id: 'shopping', name: 'Shopping', icon: '🛍️', darkColor: '#14B8A6', lightColor: '#0F766E' },
       { id: 'movies', name: 'Movies', icon: '🎬', darkColor: '#F97316', lightColor: '#EA580C' },
       { id: 'education', name: 'Education', icon: '📚', darkColor: '#6366F1', lightColor: '#4F46E5' },
@@ -95,10 +99,31 @@ export default {
 
     const categories = computed(() => {
       const currentTheme = getCurrentTheme()
-      return baseCategoriesData.map(cat => ({
+      const baseCategories = baseCategoriesData.map(cat => ({
         ...cat,
         color: currentTheme === 'light' ? cat.lightColor : cat.darkColor
       }))
+      
+      const customCats = customCategories.value.map(cat => ({
+        ...cat,
+        color: currentTheme === 'light' ? cat.lightColor : cat.darkColor
+      }))
+      
+      return [...baseCategories, ...customCats]
+    })
+
+    const sortedCategories = computed(() => {
+      const sorted = categories.value.slice().sort((a, b) => {
+        const aAmount = getCategoryAverage(a.id)
+        const bAmount = getCategoryAverage(b.id)
+        // Only show categories that have transactions
+        if (aAmount === 0 && bAmount === 0) return 0
+        if (aAmount === 0) return 1  // Move categories with no spending to end
+        if (bAmount === 0) return -1 // Move categories with no spending to end
+        return bAmount - aAmount // Sort descending (highest to lowest)
+      }).filter(category => getCategoryAverage(category.id) > 0) // Only show categories with spending
+      
+      return sorted
     })
 
     const getDateRange = () => {
@@ -186,6 +211,14 @@ export default {
       }
     }
 
+    const loadCustomCategories = async () => {
+      try {
+        customCategories.value = await customCategoryService.getAll()
+      } catch (error) {
+        console.error('Failed to load custom categories:', error)
+      }
+    }
+
     const addTransaction = async (transaction) => {
       let dateToStore = new Date().toISOString()
       if (transaction.date) {
@@ -221,12 +254,14 @@ export default {
     onMounted(async () => {
       await migrateFromLocalStorage()
       await loadTransactions()
+      await loadCustomCategories()
     })
 
     return {
       selectedPeriod,
       periods,
       categories,
+      sortedCategories,
       transactions,
       showAddModal,
       getCategoryAverage,
@@ -411,4 +446,11 @@ export default {
     height: 4rem;
     font-size: 1.5rem;
   }
+}
+
+.category-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }</style>
