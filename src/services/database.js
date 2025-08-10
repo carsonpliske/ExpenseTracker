@@ -94,7 +94,7 @@ export const budgetService = {
   
   async save(budgetData) {
     try {
-      const existing = await this.get()
+      const existing = await budgetService.get()
       if (existing.id) {
         return await db.budget.put({ ...budgetData, id: existing.id })
       } else {

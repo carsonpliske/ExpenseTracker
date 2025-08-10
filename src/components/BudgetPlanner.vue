@@ -186,6 +186,7 @@ export default {
     const showAddModal = ref(false)
     const showDeleteModal = ref(false)
     const customCategories = ref([])
+    let saveTimeout = null
 
     const baseVariableCategoriesData = [
       { id: 'groceries', name: 'Groceries', icon: '🛒', darkColor: '#3B82F6', lightColor: '#1D4ED8' },
@@ -296,17 +297,29 @@ export default {
     }
 
     const saveBudget = async () => {
-      try {
-        await budgetService.save(budget.value)
-      } catch (error) {
-        console.error('Failed to save budget:', error)
+      // Clear existing timeout
+      if (saveTimeout) {
+        clearTimeout(saveTimeout)
       }
+      
+      // Debounce save to avoid rapid fire saves
+      saveTimeout = setTimeout(async () => {
+        try {
+          console.log('Saving budget data:', budget.value)
+          await budgetService.save(budget.value)
+          console.log('Budget saved successfully')
+        } catch (error) {
+          console.error('Failed to save budget:', error)
+        }
+      }, 500) // Wait 500ms after last input before saving
     }
 
     const loadBudget = async () => {
       try {
         const savedBudget = await budgetService.get()
+        console.log('Loaded budget data:', savedBudget)
         budget.value = { ...budget.value, ...savedBudget }
+        console.log('Budget state after loading:', budget.value)
       } catch (error) {
         console.error('Failed to load budget:', error)
       }
