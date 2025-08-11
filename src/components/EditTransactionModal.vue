@@ -11,6 +11,7 @@
             v-model.number="editTransaction.amount" 
             type="number" 
             step="0.01" 
+            inputmode="decimal"
             required 
             placeholder="0.00"
           >
