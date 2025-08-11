@@ -69,7 +69,7 @@
     <div class="categories-container" :class="{ 'empty-state-spacing': !hasData }">
       <div class="categories-grid">
         <div 
-          v-for="category in categories" 
+          v-for="category in sortedCategories" 
           :key="category.id"
           class="category-item"
           @click.stop="selectCategory(category)"
@@ -234,6 +234,16 @@ export default {
       }))
       
       return [...baseCategories, ...customCats]
+    })
+
+    const sortedCategories = computed(() => {
+      return categories.value
+        .slice() // Create a copy to avoid mutating the original
+        .sort((a, b) => {
+          const amountA = getCategoryTotal(a.id)
+          const amountB = getCategoryTotal(b.id)
+          return amountB - amountA // Sort in descending order (highest to lowest)
+        })
     })
 
     const getTotalForPeriod = () => {
@@ -571,6 +581,7 @@ export default {
       highlightedCategory,
       periods,
       categories,
+      sortedCategories,
       transactions,
       getTotalForPeriod,
       getCategoryTotal,
