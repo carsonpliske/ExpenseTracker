@@ -1,7 +1,7 @@
 <template>
   <div class="pie-chart" :class="size">
     <canvas ref="chartCanvas"></canvas>
-    <div class="center-text" v-if="totalAmount !== undefined">
+    <div class="center-text" v-if="totalAmount !== undefined && totalAmount > 0">
       <div class="total-amount">${{ totalAmount.toFixed(2) }}</div>
     </div>
   </div>

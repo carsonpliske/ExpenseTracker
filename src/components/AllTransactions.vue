@@ -100,8 +100,11 @@
             </div>
           </div>
           <div class="transaction-right">
-            <div class="category-icon" :style="{ backgroundColor: getCategoryById(transaction.categoryId)?.color }">
-              {{ getCategoryById(transaction.categoryId)?.icon }}
+            <div class="category-icon" :style="{ backgroundColor: getCategoryById(transaction.categoryId)?.iconType === 'image' ? 'transparent' : getCategoryById(transaction.categoryId)?.color }">
+              <span v-if="getCategoryById(transaction.categoryId)?.iconType === 'image' && getCategoryById(transaction.categoryId)?.image">
+                <img :src="getCategoryById(transaction.categoryId)?.image" alt="category icon" class="category-image" />
+              </span>
+              <span v-else>{{ getCategoryById(transaction.categoryId)?.icon }}</span>
             </div>
           </div>
         </div>
@@ -112,6 +115,7 @@
       v-if="selectedTransaction"
       :transaction="selectedTransaction"
       :categories="categories"
+      :transactions="transactions"
       @close="selectedTransaction = null"
       @save="updateTransaction"
       @delete="deleteTransaction"
@@ -133,7 +137,7 @@
 
 <script>
 import { ref, computed, onMounted, watch } from 'vue'
-import { transactionService } from '../services/database.js'
+import { transactionService, customCategoryService } from '../services/database.js'
 import EditTransactionModal from './EditTransactionModal.vue'
 import TransactionModal from './TransactionModal.vue'
 
@@ -153,7 +157,6 @@ export default {
   setup(props) {
     
     const transactions = ref([])
-    const categories = ref([])
     const selectedFilter = ref('all')
     const specificDate = ref('')
     const startDate = ref('')
@@ -237,51 +240,10 @@ export default {
       return filtered.sort((a, b) => new Date(b.date) - new Date(a.date))
     })
 
-    const baseCategoriesData = [
-      { id: 'rent', name: 'Rent', icon: '🏠', darkColor: '#DC2626', lightColor: '#991B1B' },
-      { id: 'groceries', name: 'Groceries', icon: '🛒', darkColor: '#3B82F6', lightColor: '#1D4ED8' },
-      { id: 'transport', name: 'Transport', icon: '🚗', darkColor: '#F59E0B', lightColor: '#D97706' },
-      { id: 'restaurant', name: 'Restaurant', icon: '🍽️', darkColor: '#8B5CF6', lightColor: '#7C3AED' },
-      { id: 'health', name: 'Health', icon: '💚', darkColor: '#10B981', lightColor: '#059669' },
-      { id: 'gifts', name: 'Gifts', icon: '🎁', darkColor: '#EF4444', lightColor: '#DC2626' },
-      { id: 'games', name: 'Games', icon: '🎮', darkColor: '#A855F7', lightColor: '#9333EA' },
-      { id: 'shopping', name: 'Shopping', icon: '🛍️', darkColor: '#14B8A6', lightColor: '#0F766E' },
-      { id: 'movies', name: 'Movies', icon: '🎬', darkColor: '#F97316', lightColor: '#EA580C' },
-      { id: 'education', name: 'Education', icon: '📚', darkColor: '#6366F1', lightColor: '#4F46E5' },
-      { id: 'traveling', name: 'Traveling', icon: '✈️', darkColor: '#06B6D4', lightColor: '#0284C7' },
-      { id: 'electric', name: 'Electric', icon: '⚡', darkColor: '#FACC15', lightColor: '#CA8A04' },
-      { id: 'water', name: 'Water', icon: '💧', darkColor: '#0EA5E9', lightColor: '#0369A1' },
-      { id: 'other', name: 'Other', icon: '📋', darkColor: '#64748B', lightColor: '#475569' }
-    ]
-
-    // Get current theme
-    const getCurrentTheme = () => {
-      return document.documentElement.getAttribute('data-theme') || 'dark'
-    }
-
-    // Load categories directly in AllTransactions (same as ExpenseTracker)
-    const loadCategories = () => {
-      const currentTheme = getCurrentTheme()
-      categories.value = baseCategoriesData.map(cat => ({
-        ...cat,
-        color: currentTheme === 'light' ? cat.lightColor : cat.darkColor
-      }))
-
-      // Load custom colors if they exist
-      try {
-        const customColors = JSON.parse(localStorage.getItem('expense-tracker-custom-colors') || '{}')
-        categories.value.forEach(category => {
-          if (customColors[category.id]) {
-            category.color = customColors[category.id]
-          }
-        })
-      } catch (error) {
-        console.error('Failed to load custom colors:', error)
-      }
-    }
 
     const getCategoryById = (categoryId) => {
-      return categories.value.find(cat => cat.id === categoryId)
+      // Use props.categories instead of local categories.value
+      return props.categories.find(cat => cat.id === categoryId)
     }
 
     const getTransactionBgColor = (categoryId) => {
@@ -436,17 +398,15 @@ export default {
 
     onMounted(() => {
       loadAllTransactions()
-      loadCategories()
     })
 
-    // Watch for changes in categories prop
+    // Watch for changes in categories prop - no action needed as we use props directly
     watch(() => props.categories, (newCategories) => {
-      // Categories prop changes are handled by local loadCategories()
+      console.log('AllTransactions categories updated:', newCategories)
     }, { deep: true })
 
     return {
       transactions,
-      categories,
       selectedFilter,
       specificDate,
       startDate,
@@ -700,6 +660,13 @@ export default {
   font-size: 1.2rem;
   color: white;
   flex-shrink: 0;
+}
+
+.category-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 @media (max-width: 768px) {

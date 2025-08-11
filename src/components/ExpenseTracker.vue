@@ -131,6 +131,7 @@
       v-if="showTransactionEdit && selectedTransaction"
       :transaction="selectedTransaction"
       :categories="categories"
+      :transactions="transactions"
       @close="closeTransactionEdit"
       @save="editTransaction"
       @delete="deleteTransaction"
@@ -190,6 +191,7 @@ export default {
     const colorPickerCategory = ref(null)
     const showAddCategoryModal = ref(false)
     const customCategories = ref([])
+    const customColors = ref({})
 
     const periods = [
       { value: 'daily', label: 'Daily' },
@@ -223,12 +225,12 @@ export default {
       const currentTheme = getCurrentTheme()
       const baseCategories = baseCategoriesData.map(cat => ({
         ...cat,
-        color: currentTheme === 'light' ? cat.lightColor : cat.darkColor
+        color: customColors.value[cat.id] || (currentTheme === 'light' ? cat.lightColor : cat.darkColor)
       }))
       
       const customCats = customCategories.value.map(cat => ({
         ...cat,
-        color: currentTheme === 'light' ? cat.lightColor : cat.darkColor
+        color: customColors.value[cat.id] || (currentTheme === 'light' ? cat.lightColor : cat.darkColor)
       }))
       
       return [...baseCategories, ...customCats]
@@ -386,17 +388,14 @@ export default {
 
     const saveColor = (newColor) => {
       if (colorPickerCategory.value) {
-        const categoryIndex = categories.value.findIndex(cat => cat.id === colorPickerCategory.value.id)
-        if (categoryIndex !== -1) {
-          categories.value[categoryIndex].color = newColor
-          // Save to localStorage for persistence
-          localStorage.setItem('expense-tracker-custom-colors', JSON.stringify(
-            categories.value.reduce((acc, cat) => {
-              acc[cat.id] = cat.color
-              return acc
-            }, {})
-          ))
-        }
+        // Update the reactive customColors
+        customColors.value[colorPickerCategory.value.id] = newColor
+        
+        // Save to localStorage for persistence
+        localStorage.setItem('expense-tracker-custom-colors', JSON.stringify(customColors.value))
+        
+        // Emit updated categories so App.vue gets the changes
+        emit('categories-loaded', categories.value)
       }
       closeColorPicker()
     }
@@ -546,14 +545,9 @@ export default {
 
     const loadCustomColors = () => {
       try {
-        const customColors = localStorage.getItem('expense-tracker-custom-colors')
-        if (customColors) {
-          const colorMap = JSON.parse(customColors)
-          categories.value.forEach(category => {
-            if (colorMap[category.id]) {
-              category.color = colorMap[category.id]
-            }
-          })
+        const savedColors = localStorage.getItem('expense-tracker-custom-colors')
+        if (savedColors) {
+          customColors.value = JSON.parse(savedColors)
         }
       } catch (error) {
         console.error('Failed to load custom colors:', error)

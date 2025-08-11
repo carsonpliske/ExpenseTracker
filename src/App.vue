@@ -61,7 +61,7 @@
         <AveragesTracker v-if="activeTab === 'averages'" />
         
         <!-- Version number at bottom of content -->
-        <div class="version-number">v1.0.2</div>
+        <div class="version-number">v1.0.3</div>
       </div>
     </div>
   </div>
@@ -174,8 +174,27 @@ export default {
         }))
         
         categories.value = [...baseCategories, ...customCats]
+        
+        // Load custom colors from localStorage
+        loadCustomColors()
       } catch (error) {
         console.error('Failed to load categories in App.vue:', error)
+      }
+    }
+
+    const loadCustomColors = () => {
+      try {
+        const customColors = localStorage.getItem('expense-tracker-custom-colors')
+        if (customColors) {
+          const colorMap = JSON.parse(customColors)
+          categories.value.forEach(category => {
+            if (colorMap[category.id]) {
+              category.color = colorMap[category.id]
+            }
+          })
+        }
+      } catch (error) {
+        console.error('Failed to load custom colors:', error)
       }
     }
 
@@ -192,6 +211,11 @@ export default {
       if (newTab === 'all-transactions' && categories.value.length === 0) {
         await loadCategories()
       }
+    })
+
+    // Watch for theme changes and reload categories with correct colors
+    watch(currentTheme, async () => {
+      await loadCategories()
     })
 
     return {
