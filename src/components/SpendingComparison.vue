@@ -45,6 +45,7 @@
         v-for="row in comparisonRows"
         :key="row.category.id"
         class="comparison-row"
+        @click="openCategoryDetail(row)"
       >
         <div
           class="category-icon"
@@ -71,6 +72,16 @@
         </div>
       </div>
     </div>
+
+    <CompareCategoryDetailModal
+      v-if="selectedCompareRow"
+      :category="selectedCompareRow.category"
+      :month-a-label="monthLabel(monthA)"
+      :month-b-label="monthLabel(monthB)"
+      :transactions-a="transactionsForCategoryMonth(selectedCompareRow.category.id, monthA)"
+      :transactions-b="transactionsForCategoryMonth(selectedCompareRow.category.id, monthB)"
+      @close="selectedCompareRow = null"
+    />
   </div>
 </template>
 
@@ -78,15 +89,18 @@
 import { ref, computed, onMounted } from 'vue'
 import { transactionService, customCategoryService, migrateFromLocalStorage } from '../services/database.js'
 import MonthSelector from './MonthSelector.vue'
+import CompareCategoryDetailModal from './CompareCategoryDetailModal.vue'
 
 export default {
   name: 'SpendingComparison',
   components: {
-    MonthSelector
+    MonthSelector,
+    CompareCategoryDetailModal
   },
   setup() {
     const transactions = ref([])
     const customCategories = ref([])
+    const selectedCompareRow = ref(null)
 
     const baseCategoriesData = [
       { id: 'rent', name: 'Rent', icon: '🏠', darkColor: '#DC2626', lightColor: '#991B1B' },
@@ -158,14 +172,21 @@ export default {
         .reduce((sum, t) => sum + t.amount, 0)
     }
 
+    const transactionsForCategoryMonth = (categoryId, m) => {
+      return transactions.value.filter(t => {
+        if (t.categoryId !== categoryId) return false
+        const d = new Date(t.date)
+        return d.getFullYear() === m.year && d.getMonth() === m.month
+      })
+    }
+
     const categoryTotalForMonth = (categoryId, m) => {
-      return transactions.value
-        .filter(t => {
-          if (t.categoryId !== categoryId) return false
-          const d = new Date(t.date)
-          return d.getFullYear() === m.year && d.getMonth() === m.month
-        })
+      return transactionsForCategoryMonth(categoryId, m)
         .reduce((sum, t) => sum + t.amount, 0)
+    }
+
+    const openCategoryDetail = (row) => {
+      selectedCompareRow.value = row
     }
 
     const totalA = computed(() => totalForMonth(monthA.value))
@@ -254,7 +275,10 @@ export default {
       totalChangeAmount,
       comparisonRows,
       changeClass,
-      formatChangeText
+      formatChangeText,
+      selectedCompareRow,
+      openCategoryDetail,
+      transactionsForCategoryMonth
     }
   }
 }
@@ -338,6 +362,14 @@ export default {
   border: 1px solid var(--border-color);
   border-radius: 0.75rem;
   padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.comparison-row:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+  border-color: var(--accent-purple);
 }
 
 .category-icon {
