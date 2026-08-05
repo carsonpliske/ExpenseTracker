@@ -91,6 +91,29 @@ import { transactionService, customCategoryService, migrateFromLocalStorage } fr
 import MonthSelector from './MonthSelector.vue'
 import CompareCategoryDetailModal from './CompareCategoryDetailModal.vue'
 
+// Kept at module scope (not inside setup()) so the chosen months survive
+// switching tabs and coming back — they only reset on a full app reload.
+const initialDate = new Date()
+const twoMonthsAgo = new Date(initialDate.getFullYear(), initialDate.getMonth() - 2, 1)
+const oneMonthAgo = new Date(initialDate.getFullYear(), initialDate.getMonth() - 1, 1)
+
+const monthA = ref({ year: twoMonthsAgo.getFullYear(), month: twoMonthsAgo.getMonth() })
+const monthB = ref({ year: oneMonthAgo.getFullYear(), month: oneMonthAgo.getMonth() })
+
+const availableMonths = computed(() => {
+  const months = []
+  const cursor = new Date(initialDate.getFullYear(), initialDate.getMonth(), 1)
+  for (let i = 0; i < 12; i++) {
+    months.push({
+      year: cursor.getFullYear(),
+      month: cursor.getMonth(),
+      label: cursor.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+    })
+    cursor.setMonth(cursor.getMonth() - 1)
+  }
+  return months
+})
+
 export default {
   name: 'SpendingComparison',
   components: {
@@ -135,28 +158,6 @@ export default {
       }))
 
       return [...baseCategories, ...customCats]
-    })
-
-    const initialDate = new Date()
-    // Default to two fully-completed months: two months ago vs. last month.
-    const twoMonthsAgo = new Date(initialDate.getFullYear(), initialDate.getMonth() - 2, 1)
-    const oneMonthAgo = new Date(initialDate.getFullYear(), initialDate.getMonth() - 1, 1)
-
-    const monthA = ref({ year: twoMonthsAgo.getFullYear(), month: twoMonthsAgo.getMonth() })
-    const monthB = ref({ year: oneMonthAgo.getFullYear(), month: oneMonthAgo.getMonth() })
-
-    const availableMonths = computed(() => {
-      const months = []
-      const cursor = new Date(initialDate.getFullYear(), initialDate.getMonth(), 1)
-      for (let i = 0; i < 12; i++) {
-        months.push({
-          year: cursor.getFullYear(),
-          month: cursor.getMonth(),
-          label: cursor.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
-        })
-        cursor.setMonth(cursor.getMonth() - 1)
-      }
-      return months
     })
 
     const monthLabel = (m) => {
