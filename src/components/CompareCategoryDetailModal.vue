@@ -104,12 +104,12 @@ export default {
   },
   emits: ['close'],
   setup(props) {
-    const sortByDateDesc = (list) => {
-      return [...list].sort((a, b) => new Date(b.date) - new Date(a.date))
+    const sortByAmountDesc = (list) => {
+      return [...list].sort((a, b) => b.amount - a.amount)
     }
 
-    const sortedTransactionsA = computed(() => sortByDateDesc(props.transactionsA))
-    const sortedTransactionsB = computed(() => sortByDateDesc(props.transactionsB))
+    const sortedTransactionsA = computed(() => sortByAmountDesc(props.transactionsA))
+    const sortedTransactionsB = computed(() => sortByAmountDesc(props.transactionsB))
 
     const totalA = computed(() => props.transactionsA.reduce((sum, t) => sum + t.amount, 0))
     const totalB = computed(() => props.transactionsB.reduce((sum, t) => sum + t.amount, 0))
