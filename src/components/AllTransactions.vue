@@ -125,11 +125,12 @@
       +
     </button>
 
-    <TransactionModal 
+    <TransactionModal
       v-if="showAddModal"
       @close="showAddModal = false"
       @save="addTransaction"
       :categories="categories"
+      :transactions="transactions"
     />
     
   </div>
