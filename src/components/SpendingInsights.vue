@@ -12,14 +12,17 @@
         <div class="category-highlight">
           <div 
             class="category-icon-large" 
-            :style="{ backgroundColor: topCategory.color }"
+            :style="{ backgroundColor: topCategory && topCategory.iconType === 'image' ? 'transparent' : (topCategory?.color || '#64748B') }"
           >
-            {{ topCategory.icon }}
+            <span v-if="topCategory && topCategory.iconType === 'image' && topCategory.image">
+              <img :src="topCategory.image" alt="category icon" class="category-image" />
+            </span>
+            <span v-else>{{ topCategory?.icon || '📋' }}</span>
           </div>
           <div class="category-info">
-            <div class="category-name">{{ topCategory.name }}</div>
-            <div class="category-amount">${{ topCategory.amount.toFixed(2) }}</div>
-            <div class="category-percentage">{{ topCategory.percentage }}% of spending</div>
+            <div class="category-name">{{ topCategory?.name || 'Unknown' }}</div>
+            <div class="category-amount">${{ (topCategory?.amount || 0).toFixed(2) }}</div>
+            <div class="category-percentage">{{ topCategory?.percentage || 0 }}% of spending</div>
           </div>
         </div>
       </div>
@@ -56,7 +59,10 @@
             @click="selectTransaction(transaction)"
           >
             <div class="transaction-icon">
-              {{ getCategoryIcon(transaction.categoryId) }}
+              <span v-if="getCategoryById(transaction.categoryId)?.iconType === 'image' && getCategoryById(transaction.categoryId)?.image">
+                <img :src="getCategoryById(transaction.categoryId)?.image" alt="category icon" class="category-image-small" />
+              </span>
+              <span v-else>{{ getCategoryIcon(transaction.categoryId) }}</span>
             </div>
             <div class="transaction-details">
               <div class="transaction-description">
@@ -89,7 +95,12 @@
           >
             <div class="rank-number">{{ index + 1 }}</div>
             <div class="rank-category">
-              <span class="rank-icon">{{ category.icon }}</span>
+              <span class="rank-icon">
+                <span v-if="category.iconType === 'image' && category.image">
+                  <img :src="category.image" alt="category icon" class="category-image-small" />
+                </span>
+                <span v-else>{{ category.icon }}</span>
+              </span>
               <span class="rank-name">{{ category.name }}</span>
             </div>
             <div class="rank-amount">${{ category.amount.toFixed(2) }}</div>
@@ -172,6 +183,8 @@ export default {
           id: categoryId,
           name: category?.name || 'Unknown',
           icon: category?.icon || '📋',
+          image: category?.image,
+          iconType: category?.iconType,
           color: category?.color || '#64748B',
           amount,
           percentage: props.totalAmount > 0 ? Math.round((amount / props.totalAmount) * 100) : 0
@@ -192,6 +205,10 @@ export default {
     const getCategoryIcon = (categoryId) => {
       const category = props.categories.find(cat => cat.id === categoryId)
       return category?.icon || '📋'
+    }
+
+    const getCategoryById = (categoryId) => {
+      return props.categories.find(cat => cat.id === categoryId)
     }
 
     const getCategoryName = (categoryId) => {
@@ -234,6 +251,7 @@ export default {
       topCategory,
       categoryRankings,
       getCategoryIcon,
+      getCategoryById,
       getCategoryName,
       formatRelativeDate,
       getDailyAverageDescription,

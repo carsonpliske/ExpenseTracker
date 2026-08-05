@@ -11,7 +11,9 @@
       "Bash(npm install:*)",
       "Bash(npm run preview:*)",
       "Bash(rm:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(git status *)",
+      "PowerShell(git push *)"
     ],
     "deny": []
   }
