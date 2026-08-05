@@ -134,6 +134,14 @@ export default {
     allCategories: {
       type: Array,
       required: true
+    },
+    viewedYear: {
+      type: Number,
+      default: null
+    },
+    viewedMonth: {
+      type: Number,
+      default: null
     }
   },
   emits: ['close', 'delete-transaction', 'edit-transaction'],
@@ -168,9 +176,12 @@ export default {
             weekEnd.setHours(23, 59, 59, 999)
             
             return transactionDate >= weekStart && transactionDate <= weekEnd
-          case 'monthly':
-            return transactionDate.getMonth() === now.getMonth() && 
-                   transactionDate.getFullYear() === now.getFullYear()
+          case 'monthly': {
+            const targetYear = props.viewedYear ?? now.getFullYear()
+            const targetMonth = props.viewedMonth ?? now.getMonth()
+            return transactionDate.getMonth() === targetMonth &&
+                   transactionDate.getFullYear() === targetYear
+          }
           default:
             return true
         }

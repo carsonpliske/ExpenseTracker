@@ -14,7 +14,15 @@
 
     <!-- Mobile Layout -->
     <div class="mobile-layout">
-      <div class="period-label">{{ getCurrentPeriodLabel() }}</div>
+      <MonthSelector
+        v-if="selectedPeriod === 'monthly'"
+        :label="getCurrentPeriodLabel()"
+        :months="availableMonths"
+        :selected-year="viewedYear"
+        :selected-month="viewedMonth"
+        @select="selectMonth"
+      />
+      <div v-else class="period-label">{{ getCurrentPeriodLabel() }}</div>
       <div class="chart-container-center">
         <PieChart 
           :data="chartData" 
@@ -36,7 +44,15 @@
     <!-- Desktop Split Layout -->
     <div class="desktop-layout">
       <div class="desktop-left">
-        <div class="period-label">{{ getCurrentPeriodLabel() }}</div>
+        <MonthSelector
+          v-if="selectedPeriod === 'monthly'"
+          :label="getCurrentPeriodLabel()"
+          :months="availableMonths"
+          :selected-year="viewedYear"
+          :selected-month="viewedMonth"
+          @select="selectMonth"
+        />
+        <div v-else class="period-label">{{ getCurrentPeriodLabel() }}</div>
         <div class="chart-section">
           <PieChart 
             :data="chartData" 
@@ -61,6 +77,8 @@
           :categories="categories"
           :selected-period="selectedPeriod"
           :total-amount="getTotalForPeriod()"
+          :viewed-year="viewedYear"
+          :viewed-month="viewedMonth"
           @transaction-select="handleTransactionSelect"
         />
       </div>
@@ -122,6 +140,8 @@
       :transactions="transactions"
       :currentPeriod="selectedPeriod"
       :allCategories="categories"
+      :viewed-year="viewedYear"
+      :viewed-month="viewedMonth"
       @close="closeCategoryDetail"
       @delete-transaction="deleteTransaction"
       @edit-transaction="editTransaction"
@@ -154,7 +174,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import TransactionModal from './TransactionModal.vue'
 import CategoryDetailModal from './CategoryDetailModal.vue'
 import EditTransactionModal from './EditTransactionModal.vue'
@@ -163,6 +183,7 @@ import AddCategoryModal from './AddCategoryModal.vue'
 import PieChart from './PieChart.vue'
 import EnhancedLegend from './EnhancedLegend.vue'
 import SpendingInsights from './SpendingInsights.vue'
+import MonthSelector from './MonthSelector.vue'
 import { transactionService, customCategoryService, migrateFromLocalStorage } from '../services/database.js'
 
 export default {
@@ -175,11 +196,15 @@ export default {
     AddCategoryModal,
     PieChart,
     EnhancedLegend,
-    SpendingInsights
+    SpendingInsights,
+    MonthSelector
   },
   emits: ['categories-loaded'],
   setup(props, { emit }) {
     const selectedPeriod = ref('monthly')
+    const initialDate = new Date()
+    const viewedMonth = ref(initialDate.getMonth())
+    const viewedYear = ref(initialDate.getFullYear())
     const showAddModal = ref(false)
     const showCategoryDetail = ref(false)
     const selectedCategory = ref(null)
@@ -292,10 +317,7 @@ export default {
               transactionYear = transactionDate.getFullYear()
             }
             
-            const currentMonth = now.getMonth()
-            const currentYear = now.getFullYear()
-            
-            return transactionMonth === currentMonth && transactionYear === currentYear
+            return transactionMonth === viewedMonth.value && transactionYear === viewedYear.value
           case 'yearly':
             // Handle UTC dates for yearly comparison too
             let transactionYearForYearly
@@ -326,9 +348,9 @@ export default {
           weekStart.setDate(now.getDate() - now.getDay())
           return `Week of ${weekStart.toLocaleDateString()}`
         case 'monthly':
-          return now.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long' 
+          return new Date(viewedYear.value, viewedMonth.value, 1).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long'
           })
         case 'yearly':
           return now.getFullYear().toString()
@@ -336,6 +358,34 @@ export default {
           return ''
       }
     }
+
+    const availableMonths = computed(() => {
+      const months = []
+      const cursor = new Date(initialDate.getFullYear(), initialDate.getMonth(), 1)
+      for (let i = 0; i < 12; i++) {
+        months.push({
+          year: cursor.getFullYear(),
+          month: cursor.getMonth(),
+          label: cursor.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+        })
+        cursor.setMonth(cursor.getMonth() - 1)
+      }
+      return months
+    })
+
+    const selectMonth = ({ year, month }) => {
+      viewedYear.value = year
+      viewedMonth.value = month
+    }
+
+    // Reset the viewed month back to the current month whenever the user
+    // navigates away from the Monthly tab, so returning to it starts fresh.
+    watch(selectedPeriod, (newPeriod) => {
+      if (newPeriod !== 'monthly') {
+        viewedYear.value = initialDate.getFullYear()
+        viewedMonth.value = initialDate.getMonth()
+      }
+    })
 
     const chartData = computed(() => {
       const categoryTotals = categories.value
@@ -575,6 +625,10 @@ export default {
 
     return {
       selectedPeriod,
+      viewedMonth,
+      viewedYear,
+      availableMonths,
+      selectMonth,
       showAddModal,
       showCategoryDetail,
       selectedCategory,

@@ -1,161 +1,59 @@
-# Todo List: Mobile UI Improvements Session
+# Todo List: Month Selector Dropdown (Home Screen)
 
-## Progress Tracking
+## Session Focus
+Let the user tap the "August 2026"-style month label on the home screen and pick a prior month from a dropdown, so the pie chart / totals / categories / legend for that month are shown instead of only the current month. Rolling 12-month list; resets to current month when leaving and returning to the Monthly tab. (Not in this session: the separate month-over-month comparison tab with red/green deltas — that's saved for a future session.)
 
-**Current Status**: Mobile optimization and UX improvements completed
-**Session Focus**: Mobile-first design improvements and user experience enhancements
+## Plan
 
-## Tasks Completed This Session
+### Root cause of current limitation
+`ExpenseTracker.vue`'s `getTransactionsForPeriod()` always filters the `monthly` case against `new Date()` (today), and `getCurrentPeriodLabel()` always renders today's month/year. There's no concept of "which month am I looking at" — only "what period granularity" (daily/weekly/monthly/yearly). Two child components independently reference `new Date()` too, which would show wrong data once a month becomes selectable:
+- `CategoryDetailModal.vue` re-filters transactions itself using `now` for its `monthly` view, ignoring the parent's selected month.
+- `SpendingInsights.vue`'s "per day this month" average divides by `now.getDate()` (days elapsed so far), which is wrong for a past month.
 
-### Mobile Button Improvements
-- [x] **Increased mobile plus button size** - Enhanced touch target from 3rem to 4rem (48px to 64px)
-- [x] **Improved button visibility** - Increased font size from 1.25rem to 1.5rem for better mobile accessibility
+### Steps
+1. **ExpenseTracker.vue: add viewed-month state**
+   - `viewedMonth` / `viewedYear` refs, defaulting to the current month/year.
+   - `showMonthDropdown` ref to toggle the dropdown.
 
-### Header Layout Optimization  
-- [x] **Reduced mobile header height** - Compressed purple header padding from 2rem to 1.25rem top, 1.5rem to 1rem bottom
-- [x] **Better navigation prominence** - Gave Expenses/Budget Planner/Averages tabs more visual space
+2. **ExpenseTracker.vue: build the month list**
+   - `availableMonths` computed: rolling 12 months ending at the current month (newest first), each with `{ year, month, label }`.
 
-### Averages Tab Improvements
-- [x] **Unified period selector layout** - Made Daily/Weekly/Monthly/Yearly tabs match Expenses tab design with horizontal alignment
-- [x] **Fixed dollar amount visibility** - Enhanced text color and removed blurry effects for better readability against purple gradient
+3. **ExpenseTracker.vue: use viewed month instead of "today"**
+   - `getTransactionsForPeriod()`'s `monthly` branch compares against `viewedYear`/`viewedMonth`.
+   - `getCurrentPeriodLabel()`'s `monthly` branch renders `viewedYear`/`viewedMonth`.
 
-### Color Picker Feature (Major Feature)
-- [x] **Long press detection** - Added 800ms hold detection for pie chart slices
-- [x] **ColorPickerModal component** - Created custom modal with 20 high-visibility colors optimized for charts  
-- [x] **Mobile touch support** - Implemented proper touch event handling and prevented text selection
-- [x] **Real-time color updates** - Colors change immediately across pie chart, legend, and category grid
-- [x] **Persistent storage** - Custom colors saved to localStorage and loaded on app start
-- [x] **Fixed mobile long press issues** - Resolved text highlighting and touch event conflicts
+4. **ExpenseTracker.vue: dropdown UI**
+   - Turn `.period-label` into a clickable button (only interactive in Monthly mode) with a small chevron.
+   - Dropdown renders as a compact, absolutely-positioned list under the label (max-height + scroll, not full-width/full-height so it doesn't cover the whole chart), with a Vue `<transition>` for a smooth fade/scale rather than a hard cut.
+   - Click-outside closes it; picking a month sets `viewedYear`/`viewedMonth`, closes the dropdown, and is visually marked as selected in the list.
 
-### Empty State Layout Optimization
-- [x] **Centered empty state positioning** - Dramatically improved "No expenses recorded" message placement
-- [x] **Reduced empty space** - Applied aggressive negative margins (-24rem top, -8rem categories) for better screen utilization
-- [x] **Balanced spacing** - Positioned message and categories to eliminate awkward gaps
+5. **Reset behavior**
+   - Switching the top period tab away from "Monthly" and back resets `viewedMonth`/`viewedYear` to the current month.
 
-## Technical Implementation Details
+6. **Fix downstream components so they respect the viewed month**
+   - Pass `viewedYear`/`viewedMonth` into `CategoryDetailModal.vue` so drilling into a category while viewing a past month shows that month's transactions, not today's.
+   - Pass `viewedYear`/`viewedMonth` into `SpendingInsights.vue` so the "per day this month" average divides by the correct number of days for the viewed month (days elapsed if it's the current month, full days-in-month otherwise).
 
-### Database & Persistence
-- **IndexedDB Integration**: All data stored in persistent browser database (not just cache)
-- **Custom Color Persistence**: User color preferences saved across sessions
-- **Data Migration**: Existing localStorage data automatically migrated to IndexedDB
+7. **Manual test in the running dev server**
+   - Add/verify transactions across at least two different months.
+   - Confirm: dropdown opens/closes smoothly, doesn't cover the entire chart, selecting a month updates chart/legend/category totals/total amount, category drill-down shows the right month, switching to another period tab and back to Monthly resets to the current month.
 
-### Mobile Optimization
-- **Touch-friendly targets**: All interactive elements meet mobile accessibility standards
-- **Responsive design**: Layouts adapt seamlessly between mobile and desktop
-- **Performance**: Efficient event handling and minimal re-renders
+## Status
+- [x] Step 1: viewed-month state
+- [x] Step 2: available months list
+- [x] Step 3: filter/label use viewed month
+- [x] Step 4: dropdown UI + transition
+- [x] Step 5: reset on tab switch
+- [x] Step 6: fix CategoryDetailModal + SpendingInsights
+- [ ] Step 7: manual test (needs user to check in browser — no browser tool available this session)
 
-### User Experience
-- **Intuitive interactions**: Tap to highlight, hold to customize colors
-- **Visual feedback**: Hover states, active states, and smooth transitions
-- **Error prevention**: Proper event handling prevents accidental selections
+## Implementation notes
+- New file: `src/components/MonthSelector.vue` — self-contained dropdown (button + transition + click-outside), used twice in `ExpenseTracker.vue` (mobile layout + desktop layout), matching the existing pattern of duplicating the PieChart/EnhancedLegend markup per layout.
+- `ExpenseTracker.vue`: added `viewedMonth`/`viewedYear` refs (default to current month), `availableMonths` computed (rolling 12 months), `selectMonth` handler, and a `watch(selectedPeriod, ...)` that resets the viewed month back to current whenever the top tab leaves "Monthly".
+- `getTransactionsForPeriod()`'s monthly branch and `getCurrentPeriodLabel()`'s monthly branch now use `viewedYear`/`viewedMonth` instead of always "today".
+- `CategoryDetailModal.vue` and `SpendingInsights.vue` now accept `viewed-year`/`viewed-month` props so category drill-down and the "per day this month" average stay correct when viewing a past month (previously both silently used `new Date()`).
+- `npm run build` passes cleanly with these changes.
 
-## Review Section
-
-### Successfully Enhanced Mobile Experience
-
-**What was improved:**
-1. **Touch Targets**: Larger, more accessible buttons for mobile users
-2. **Visual Hierarchy**: Better spacing and prominence for navigation elements  
-3. **Customization**: Advanced color picker with long press interaction
-4. **Layout Efficiency**: Optimized empty state positioning eliminates wasted space
-5. **Cross-platform Consistency**: Unified design patterns across mobile and desktop
-
-**Key Benefits Achieved:**
-- **Better Mobile UX**: Larger touch targets and improved accessibility
-- **Advanced Personalization**: Users can customize pie chart colors for better visual distinction
-- **Efficient Space Usage**: Empty states now use screen space effectively
-- **Professional Polish**: Consistent design language and smooth interactions
-
-**Files Modified:**
-- `src/components/ExpenseTracker.vue` (button sizing, color picker integration, empty state positioning)
-- `src/components/AveragesTracker.vue` (period selector layout, text visibility)  
-- `src/components/PieChart.vue` (long press detection, touch event handling)
-- `src/components/ColorPickerModal.vue` (created - custom color selection UI)
-- `src/components/EnhancedLegend.vue` (empty state positioning)
-- `src/style.css` (header sizing adjustments)
-
-**Status**: ✅ **COMPLETED** - Mobile experience significantly enhanced with advanced customization features
-
----
-
-# Todo List: Custom Categories with Image Support Session
-
-## Progress Tracking
-
-**Current Status**: Custom category creation with PNG/JPEG image upload completed
-**Session Focus**: Enable users to create custom categories with names, emojis, or uploaded images
-
-## Tasks Completed This Session
-
-### Database & Backend Infrastructure
-- [x] **Updated database schema** - Added customCategories table to IndexedDB with version 2 migration
-- [x] **Created custom category service** - Added CRUD operations for custom categories
-- [x] **Data model design** - Categories support both emoji icons and base64-encoded images
-
-### User Interface Components
-- [x] **AddCategoryModal component** - Full-featured modal with name input, emoji picker, and image upload
-- [x] **Plus button integration** - Added dashed-border "Add Category" button to Expenses tab category grid
-- [x] **Image upload handling** - PNG/JPEG support with 1MB limit and base64 conversion
-- [x] **Category display system** - Images show everywhere except transaction dropdown (as requested)
-
-### Component Updates for Custom Category Support
-- [x] **ExpenseTracker.vue** - Added custom category loading, modal integration, and image display
-- [x] **BudgetPlanner.vue** - Updated to load and display custom categories with images
-- [x] **AveragesTracker.vue** - Added custom category support and image display
-- [x] **AllTransactions.vue** - Updated category icon display to support images
-- [x] **SpendingInsights.vue** - Added image support in insights and rankings
-- [x] **App.vue** - Fixed category loading to ensure AllTransactions gets custom categories
-
-### Styling & Visual Design
-- [x] **Category image CSS** - Added styles for different image sizes (full, small)
-- [x] **Add button styling** - Dashed border design that matches the UI aesthetic
-- [x] **Modal design** - Clean, modern modal with tabs for emoji vs image selection
-- [x] **Responsive support** - Works on both mobile and desktop
-
-## Technical Implementation Details
-
-### Data Storage Strategy
-- **Base64 encoding**: Images converted to base64 strings for IndexedDB storage
-- **Efficient loading**: Custom categories loaded once and merged with base categories
-- **Theme integration**: Custom colors respect light/dark theme switching
-
-### User Experience Features  
-- **Intuitive creation**: Click "+" button → name category → choose emoji OR upload image → select color
-- **Visual feedback**: Image preview during upload, color selection with palette
-- **Error handling**: File size limits, upload validation, graceful fallbacks
-- **Cross-component consistency**: Custom categories appear identically across all tabs
-
-### Performance Considerations
-- **Lazy loading**: Categories only loaded when needed
-- **Efficient caching**: Categories loaded once per session
-- **Memory management**: Image compression and size limits prevent memory issues
-
-## Review Section
-
-### Successfully Enhanced Category System
-
-**What was implemented:**
-1. **Complete Custom Category Creation**: Users can create categories with custom names and icons
-2. **Dual Icon Support**: Choose between emoji picker OR image upload (PNG/JPEG)
-3. **Universal Display**: Custom categories appear in all tabs with proper names and images
-4. **Database Integration**: Persistent storage with proper migration and data integrity
-5. **UI Polish**: Professional modal design with intuitive user flow
-
-**Key Benefits Achieved:**
-- **User Personalization**: Create categories that match individual spending patterns
-- **Visual Recognition**: Upload brand logos or personal images for better category identification
-- **Consistent Experience**: Custom categories work seamlessly across all app sections
-- **Data Integrity**: Robust database layer ensures categories persist across sessions
-
-**Files Modified:**
-- `src/services/database.js` (added custom categories table and service methods)
-- `src/components/AddCategoryModal.vue` (created - complete modal with emoji picker and image upload)
-- `src/components/ExpenseTracker.vue` (integrated add button, modal, custom category loading)
-- `src/components/BudgetPlanner.vue` (added custom category support and image display)
-- `src/components/AveragesTracker.vue` (added custom category support and image display)  
-- `src/components/AllTransactions.vue` (updated category icon display for images)
-- `src/components/SpendingInsights.vue` (added image support in insights and rankings)
-- `src/App.vue` (fixed category loading for AllTransactions component)
-- `src/style.css` (added category image styles and add button styling)
-
-**Status**: ✅ **COMPLETED** - Full custom category system with image support implemented across all components
+## Decisions confirmed with user
+- Month range: rolling 12 months (not calendar-year-only).
+- Leaving/returning to Monthly tab resets to current month (doesn't remember last-picked past month).

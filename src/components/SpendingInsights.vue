@@ -133,6 +133,14 @@ export default {
     totalAmount: {
       type: Number,
       required: true
+    },
+    viewedYear: {
+      type: Number,
+      default: null
+    },
+    viewedMonth: {
+      type: Number,
+      default: null
     }
   },
   setup(props, { emit }) {
@@ -152,7 +160,7 @@ export default {
       
       const now = new Date()
       let dayCount = 1
-      
+
       switch (props.selectedPeriod) {
         case 'daily':
           dayCount = 1
@@ -160,9 +168,13 @@ export default {
         case 'weekly':
           dayCount = 7
           break
-        case 'monthly':
-          dayCount = now.getDate() // Days elapsed in current month
+        case 'monthly': {
+          const isCurrentMonth = props.viewedYear === now.getFullYear() && props.viewedMonth === now.getMonth()
+          dayCount = isCurrentMonth
+            ? now.getDate() // Days elapsed so far in the current month
+            : new Date(props.viewedYear, props.viewedMonth + 1, 0).getDate() // Full days in the viewed month
           break
+        }
       }
       
       return totalWithoutRent / dayCount
