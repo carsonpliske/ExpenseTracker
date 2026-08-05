@@ -38,15 +38,22 @@
         >
           Expenses
         </button>
-        <button 
-          class="nav-tab" 
+        <button
+          class="nav-tab"
           :class="{ active: activeTab === 'budget' }"
           @click="activeTab = 'budget'"
         >
           Budget Planner
         </button>
-        <button 
-          class="nav-tab" 
+        <button
+          class="nav-tab"
+          :class="{ active: activeTab === 'compare' }"
+          @click="activeTab = 'compare'"
+        >
+          Compare
+        </button>
+        <button
+          class="nav-tab"
           :class="{ active: activeTab === 'averages' }"
           @click="activeTab = 'averages'"
         >
@@ -58,10 +65,11 @@
         <AllTransactions v-if="activeTab === 'all-transactions'" :categories="categories" />
         <ExpenseTracker v-if="activeTab === 'expenses'" @categories-loaded="handleCategoriesLoaded" />
         <BudgetPlanner v-if="activeTab === 'budget'" />
+        <SpendingComparison v-if="activeTab === 'compare'" />
         <AveragesTracker v-if="activeTab === 'averages'" />
         
         <!-- Version number at bottom of content -->
-        <div class="version-number">v1.0.9</div>
+        <div class="version-number">v1.0.10</div>
       </div>
     </div>
   </div>
@@ -71,6 +79,7 @@
 import { ref, watch, nextTick, onMounted } from 'vue'
 import ExpenseTracker from './components/ExpenseTracker.vue'
 import BudgetPlanner from './components/BudgetPlanner.vue'
+import SpendingComparison from './components/SpendingComparison.vue'
 import AveragesTracker from './components/AveragesTracker.vue'
 import AllTransactions from './components/AllTransactions.vue'
 import ThemeToggle from './components/ThemeToggle.vue'
@@ -81,6 +90,7 @@ export default {
   components: {
     ExpenseTracker,
     BudgetPlanner,
+    SpendingComparison,
     AveragesTracker,
     AllTransactions,
     ThemeToggle

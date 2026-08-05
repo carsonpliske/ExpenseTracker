@@ -1,27 +1,33 @@
-# Todo List: Local vs UTC Date Bug Fix
+# Todo List: Month-to-Month Category Comparison Tab
 
 ## Session Focus
-User reported: adding a transaction on the 31st of a month sometimes rolled it into the 1st of the next month (visible in the pie chart / monthly totals). Root-caused and fixed a broader local-vs-UTC date mismatch, not just a month-end edge case.
+New tab (between "Budget Planner" and "Averages") that compares per-category spending between two chosen months, showing $ and % change with green (spent less) / red (spent more) coloring. This is the feature saved in memory from the month-selector session — now being built for real.
 
-## Root cause
-Transactions are stored using **local** wall-clock semantics: `TransactionModal`/`EditTransactionModal` feed `addTransaction`/`editTransaction` (in `ExpenseTracker.vue`) a `YYYY-MM-DD` string from a native `<input type="date">`, which gets combined with the current local time and turned into an ISO string via `new Date(year, month-1, day, ...localTime).toISOString()`.
+## Plan
 
-Several places then read that stored ISO string back using **UTC** methods (`getUTCMonth`/`getUTCFullYear`, or `.toISOString().split('T')[0]`) instead of local methods. Whenever local time-of-day + the browser's timezone offset crosses a UTC midnight boundary, the UTC calendar day differs from the local day the user actually picked. Most visible at month-end (rolls into next month), but the same class of bug existed in a few other spots.
+### New file: `src/components/SpendingComparison.vue`
+- Follows the same data-loading pattern as `AveragesTracker.vue`/`ExpenseTracker.vue`: loads all transactions via `transactionService.getAll()` and categories via the shared `baseCategoriesData` list + `customCategoryService.getAll()`.
+- Two month pickers at the top, reusing the existing `MonthSelector.vue` dropdown component (already built for the home screen): "Comparing **[Month A ▾]** → **[Month B ▾]**". Both draw from the same rolling 12-month list.
+- **Default on tab open**: Month A = 2 months ago, Month B = 1 month ago (last month) — both fully-completed months, per your request.
+- **Summary row** at the top: total spent in Month A, total spent in Month B, overall $ and % change (same green/red rule as categories).
+- **Category list** below (scrollable), one row per category that had spending in either month:
+  - icon, name, Month A amount, Month B amount
+  - $ change and % change, styled **green** if Month B < Month A (spending decreased), **red** if Month B > Month A (spending increased)
+  - Edge cases: category had $0 in Month A but spending in Month B → labeled "New" instead of a percentage (still red, since it's new spending). Category had spending in Month A but $0 in Month B → "-100%" (green). Category with $0 in both months is left out of the list entirely.
+  - Sorted by the size of the $ change (biggest swings first), so the categories most worth your attention surface at the top.
 
-## Fixed
-- [x] `ExpenseTracker.vue` — `getTransactionsForPeriod()`'s `monthly`/`yearly` branches: removed the "includes T and Z → use UTC getters" heuristic (it was *always* true, since `.toISOString()` always produces T/Z), now always uses local getters (`getMonth()`, `getFullYear()`), matching how the date was actually constructed.
-- [x] `AveragesTracker.vue` — `getDateRange()`: same UTC-heuristic removed; now strips to local calendar day (`getFullYear()`, `getMonth()`, `getDate()`).
-- [x] `EditTransactionModal.vue` — pre-filling the date field on open used `.toISOString().split('T')[0]` (UTC calendar day); now builds `YYYY-MM-DD` from local getters, so editing a transaction added late at night no longer shows the wrong day in the date picker.
-- [x] `AllTransactions.vue` — "Specific Date" and "Date Range" filters used the same `.toISOString().split('T')[0]` pattern to compare against local-semantics date-input values; replaced with a shared `toLocalDateString()` helper.
-- [x] `npm run build` passes cleanly.
+### `App.vue`
+- Import and register the new component.
+- Add a "Compare" nav tab between "Budget Planner" and "Averages".
 
-## Not changed
-- The construction logic in `addTransaction`/`editTransaction` (ExpenseTracker.vue) was already correct (local semantics) — left as-is. Only the *reading* side was wrong.
-- `AllTransactions.vue`'s "This Month"/"This Week" filters and month-header grouping already used local getters correctly — no change needed there.
-- Existing stored transaction data is untouched; this only changes how dates already in the database are interpreted for display/filtering, which corrects historical entries too (no migration needed).
+### Manual test
+- Open the tab, confirm it defaults to 2-months-ago vs last-month with correct totals.
+- Switch both month pickers to other months and confirm the list updates.
+- Check a category that only has spending in one of the two months to confirm the "New" / "-100%" edge cases render correctly.
+- Check colors: overspending in red, underspending in green, matches in a neutral color.
 
-## Manual test needed (browser access unavailable this session)
-- Add a transaction dated the 31st (or last day of the current month) — confirm it shows in the current month's pie chart/total, not next month.
-- Edit an existing transaction — confirm the date field pre-fills with the correct day.
-- In All Transactions, try "Specific Date" and "Date Range" filters near a month boundary.
-- Check the Averages tab still shows sensible month/day counts.
+## Status
+- [x] Build `SpendingComparison.vue`
+- [x] Wire into `App.vue` nav
+- [x] `npm run build` passes cleanly
+- [ ] Manual test (needs user to check in browser — no browser tool available this session)
