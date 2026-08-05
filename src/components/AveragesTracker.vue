@@ -130,13 +130,10 @@ export default {
       if (transactions.value.length === 0) return { start: new Date(), end: new Date() }
       
       const dates = transactions.value.map(t => {
+        // Transactions are stored using local wall-clock semantics, so strip to
+        // the local calendar day rather than the UTC one.
         const date = new Date(t.date)
-        // Handle UTC dates properly
-        if (t.date.includes('T') && t.date.includes('Z')) {
-          // For UTC dates, use UTC methods to avoid timezone shifts  
-          return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
-        }
-        return date
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate())
       })
       const start = new Date(Math.min(...dates))
       const end = new Date(Math.max(...dates))

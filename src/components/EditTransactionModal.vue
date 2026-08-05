@@ -189,11 +189,16 @@ export default {
 
     onMounted(() => {
       // Pre-populate form with existing transaction data
+      const transactionDate = new Date(props.transaction.date)
+      const year = transactionDate.getFullYear()
+      const month = String(transactionDate.getMonth() + 1).padStart(2, '0')
+      const day = String(transactionDate.getDate()).padStart(2, '0')
+
       editTransaction.value = {
         amount: props.transaction.amount,
         categoryId: props.transaction.categoryId,
         description: props.transaction.description || '',
-        date: new Date(props.transaction.date).toISOString().split('T')[0]
+        date: `${year}-${month}-${day}`
       }
       
       // Set the selected category for display

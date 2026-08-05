@@ -173,13 +173,14 @@ export default {
       { value: 'range', label: 'Date Range' }
     ]
 
-    const getCurrentLocalDate = () => {
-      const now = new Date()
-      const year = now.getFullYear()
-      const month = String(now.getMonth() + 1).padStart(2, '0')
-      const day = String(now.getDate()).padStart(2, '0')
+    const toLocalDateString = (date) => {
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
       return `${year}-${month}-${day}`
     }
+
+    const getCurrentLocalDate = () => toLocalDateString(new Date())
 
     const filteredTransactions = computed(() => {
       let filtered = [...transactions.value]
@@ -207,16 +208,16 @@ export default {
         })
       } else if (selectedFilter.value === 'specific' && specificDate.value) {
         filtered = filtered.filter(t => {
-          const transactionDate = new Date(t.date).toISOString().split('T')[0]
+          const transactionDate = toLocalDateString(new Date(t.date))
           return transactionDate === specificDate.value
         })
       } else if (selectedFilter.value === 'range' && startDate.value) {
         // If no end date, use start date as end date
         const endDateValue = endDate.value || startDate.value
-        
+
         filtered = filtered.filter(t => {
           // Convert transaction date to YYYY-MM-DD format for comparison
-          const transactionDateStr = new Date(t.date).toISOString().split('T')[0]
+          const transactionDateStr = toLocalDateString(new Date(t.date))
           return transactionDateStr >= startDate.value && transactionDateStr <= endDateValue
         })
       }

@@ -1,59 +1,27 @@
-# Todo List: Month Selector Dropdown (Home Screen)
+# Todo List: Local vs UTC Date Bug Fix
 
 ## Session Focus
-Let the user tap the "August 2026"-style month label on the home screen and pick a prior month from a dropdown, so the pie chart / totals / categories / legend for that month are shown instead of only the current month. Rolling 12-month list; resets to current month when leaving and returning to the Monthly tab. (Not in this session: the separate month-over-month comparison tab with red/green deltas — that's saved for a future session.)
+User reported: adding a transaction on the 31st of a month sometimes rolled it into the 1st of the next month (visible in the pie chart / monthly totals). Root-caused and fixed a broader local-vs-UTC date mismatch, not just a month-end edge case.
 
-## Plan
+## Root cause
+Transactions are stored using **local** wall-clock semantics: `TransactionModal`/`EditTransactionModal` feed `addTransaction`/`editTransaction` (in `ExpenseTracker.vue`) a `YYYY-MM-DD` string from a native `<input type="date">`, which gets combined with the current local time and turned into an ISO string via `new Date(year, month-1, day, ...localTime).toISOString()`.
 
-### Root cause of current limitation
-`ExpenseTracker.vue`'s `getTransactionsForPeriod()` always filters the `monthly` case against `new Date()` (today), and `getCurrentPeriodLabel()` always renders today's month/year. There's no concept of "which month am I looking at" — only "what period granularity" (daily/weekly/monthly/yearly). Two child components independently reference `new Date()` too, which would show wrong data once a month becomes selectable:
-- `CategoryDetailModal.vue` re-filters transactions itself using `now` for its `monthly` view, ignoring the parent's selected month.
-- `SpendingInsights.vue`'s "per day this month" average divides by `now.getDate()` (days elapsed so far), which is wrong for a past month.
+Several places then read that stored ISO string back using **UTC** methods (`getUTCMonth`/`getUTCFullYear`, or `.toISOString().split('T')[0]`) instead of local methods. Whenever local time-of-day + the browser's timezone offset crosses a UTC midnight boundary, the UTC calendar day differs from the local day the user actually picked. Most visible at month-end (rolls into next month), but the same class of bug existed in a few other spots.
 
-### Steps
-1. **ExpenseTracker.vue: add viewed-month state**
-   - `viewedMonth` / `viewedYear` refs, defaulting to the current month/year.
-   - `showMonthDropdown` ref to toggle the dropdown.
+## Fixed
+- [x] `ExpenseTracker.vue` — `getTransactionsForPeriod()`'s `monthly`/`yearly` branches: removed the "includes T and Z → use UTC getters" heuristic (it was *always* true, since `.toISOString()` always produces T/Z), now always uses local getters (`getMonth()`, `getFullYear()`), matching how the date was actually constructed.
+- [x] `AveragesTracker.vue` — `getDateRange()`: same UTC-heuristic removed; now strips to local calendar day (`getFullYear()`, `getMonth()`, `getDate()`).
+- [x] `EditTransactionModal.vue` — pre-filling the date field on open used `.toISOString().split('T')[0]` (UTC calendar day); now builds `YYYY-MM-DD` from local getters, so editing a transaction added late at night no longer shows the wrong day in the date picker.
+- [x] `AllTransactions.vue` — "Specific Date" and "Date Range" filters used the same `.toISOString().split('T')[0]` pattern to compare against local-semantics date-input values; replaced with a shared `toLocalDateString()` helper.
+- [x] `npm run build` passes cleanly.
 
-2. **ExpenseTracker.vue: build the month list**
-   - `availableMonths` computed: rolling 12 months ending at the current month (newest first), each with `{ year, month, label }`.
+## Not changed
+- The construction logic in `addTransaction`/`editTransaction` (ExpenseTracker.vue) was already correct (local semantics) — left as-is. Only the *reading* side was wrong.
+- `AllTransactions.vue`'s "This Month"/"This Week" filters and month-header grouping already used local getters correctly — no change needed there.
+- Existing stored transaction data is untouched; this only changes how dates already in the database are interpreted for display/filtering, which corrects historical entries too (no migration needed).
 
-3. **ExpenseTracker.vue: use viewed month instead of "today"**
-   - `getTransactionsForPeriod()`'s `monthly` branch compares against `viewedYear`/`viewedMonth`.
-   - `getCurrentPeriodLabel()`'s `monthly` branch renders `viewedYear`/`viewedMonth`.
-
-4. **ExpenseTracker.vue: dropdown UI**
-   - Turn `.period-label` into a clickable button (only interactive in Monthly mode) with a small chevron.
-   - Dropdown renders as a compact, absolutely-positioned list under the label (max-height + scroll, not full-width/full-height so it doesn't cover the whole chart), with a Vue `<transition>` for a smooth fade/scale rather than a hard cut.
-   - Click-outside closes it; picking a month sets `viewedYear`/`viewedMonth`, closes the dropdown, and is visually marked as selected in the list.
-
-5. **Reset behavior**
-   - Switching the top period tab away from "Monthly" and back resets `viewedMonth`/`viewedYear` to the current month.
-
-6. **Fix downstream components so they respect the viewed month**
-   - Pass `viewedYear`/`viewedMonth` into `CategoryDetailModal.vue` so drilling into a category while viewing a past month shows that month's transactions, not today's.
-   - Pass `viewedYear`/`viewedMonth` into `SpendingInsights.vue` so the "per day this month" average divides by the correct number of days for the viewed month (days elapsed if it's the current month, full days-in-month otherwise).
-
-7. **Manual test in the running dev server**
-   - Add/verify transactions across at least two different months.
-   - Confirm: dropdown opens/closes smoothly, doesn't cover the entire chart, selecting a month updates chart/legend/category totals/total amount, category drill-down shows the right month, switching to another period tab and back to Monthly resets to the current month.
-
-## Status
-- [x] Step 1: viewed-month state
-- [x] Step 2: available months list
-- [x] Step 3: filter/label use viewed month
-- [x] Step 4: dropdown UI + transition
-- [x] Step 5: reset on tab switch
-- [x] Step 6: fix CategoryDetailModal + SpendingInsights
-- [ ] Step 7: manual test (needs user to check in browser — no browser tool available this session)
-
-## Implementation notes
-- New file: `src/components/MonthSelector.vue` — self-contained dropdown (button + transition + click-outside), used twice in `ExpenseTracker.vue` (mobile layout + desktop layout), matching the existing pattern of duplicating the PieChart/EnhancedLegend markup per layout.
-- `ExpenseTracker.vue`: added `viewedMonth`/`viewedYear` refs (default to current month), `availableMonths` computed (rolling 12 months), `selectMonth` handler, and a `watch(selectedPeriod, ...)` that resets the viewed month back to current whenever the top tab leaves "Monthly".
-- `getTransactionsForPeriod()`'s monthly branch and `getCurrentPeriodLabel()`'s monthly branch now use `viewedYear`/`viewedMonth` instead of always "today".
-- `CategoryDetailModal.vue` and `SpendingInsights.vue` now accept `viewed-year`/`viewed-month` props so category drill-down and the "per day this month" average stay correct when viewing a past month (previously both silently used `new Date()`).
-- `npm run build` passes cleanly with these changes.
-
-## Decisions confirmed with user
-- Month range: rolling 12 months (not calendar-year-only).
-- Leaving/returning to Monthly tab resets to current month (doesn't remember last-picked past month).
+## Manual test needed (browser access unavailable this session)
+- Add a transaction dated the 31st (or last day of the current month) — confirm it shows in the current month's pie chart/total, not next month.
+- Edit an existing transaction — confirm the date field pre-fills with the correct day.
+- In All Transactions, try "Specific Date" and "Date Range" filters near a month boundary.
+- Check the Averages tab still shows sensible month/day counts.

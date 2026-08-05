@@ -305,28 +305,12 @@ export default {
             
             return transactionDate >= weekStart && transactionDate <= weekEnd
           case 'monthly':
-            // Handle UTC dates properly by using UTC methods for comparison
-            let transactionMonth, transactionYear
-            if (transaction.date.includes('T') && transaction.date.includes('Z')) {
-              // This is a UTC ISO string, use UTC methods
-              transactionMonth = transactionDate.getUTCMonth()
-              transactionYear = transactionDate.getUTCFullYear()
-            } else {
-              // Local date, use local methods
-              transactionMonth = transactionDate.getMonth()
-              transactionYear = transactionDate.getFullYear()
-            }
-            
-            return transactionMonth === viewedMonth.value && transactionYear === viewedYear.value
+            // Transactions are stored using local wall-clock semantics (see addTransaction/
+            // editTransaction), so they must be read back with local getters to land in the
+            // same calendar day/month the user actually picked.
+            return transactionDate.getMonth() === viewedMonth.value && transactionDate.getFullYear() === viewedYear.value
           case 'yearly':
-            // Handle UTC dates for yearly comparison too
-            let transactionYearForYearly
-            if (transaction.date.includes('T') && transaction.date.includes('Z')) {
-              transactionYearForYearly = transactionDate.getUTCFullYear()
-            } else {
-              transactionYearForYearly = transactionDate.getFullYear()
-            }
-            return transactionYearForYearly === now.getFullYear()
+            return transactionDate.getFullYear() === now.getFullYear()
           default:
             return true
         }

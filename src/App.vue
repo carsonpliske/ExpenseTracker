@@ -61,7 +61,7 @@
         <AveragesTracker v-if="activeTab === 'averages'" />
         
         <!-- Version number at bottom of content -->
-        <div class="version-number">v1.0.8</div>
+        <div class="version-number">v1.0.9</div>
       </div>
     </div>
   </div>
